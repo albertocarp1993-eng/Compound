@@ -22,3 +22,31 @@ export type CreatePortfolioPayload = {
 export type CreatePortfolioResponse = {
   portfolio: PortfolioSummary;
 };
+
+export type UpdateHoldingPayload = {
+  quantity?: number;
+  avgCost?: number;
+  dripEnabled?: boolean;
+};
+
+export type HoldingPosition = {
+  id: number;
+  portfolioId: number;
+  assetId: number;
+  symbol: string;
+  name: string;
+  quantity: number;
+  avgCost: number;
+  dripEnabled: boolean;
+  currentPrice: number;
+  positionValue: number;
+};
+
+export type UpdateHoldingResponse = {
+  holding: HoldingPosition;
+};
+
+export type DeleteHoldingResponse = {
+  deleted: boolean;
+  holding: HoldingPosition;
+};

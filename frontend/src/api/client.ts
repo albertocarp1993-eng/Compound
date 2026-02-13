@@ -11,7 +11,10 @@ import { AssetFinancialsResponse } from '../types/financials';
 import {
   CreatePortfolioPayload,
   CreatePortfolioResponse,
+  DeleteHoldingResponse,
   PortfoliosResponse,
+  UpdateHoldingPayload,
+  UpdateHoldingResponse,
 } from '../types/portfolio';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
@@ -84,6 +87,24 @@ export const createPortfolio = (
   fetchJson<CreatePortfolioResponse>('/api/portfolios', {
     method: 'POST',
     body: JSON.stringify(payload),
+  });
+
+export const updatePortfolioHolding = (
+  portfolioId: number,
+  holdingId: number,
+  payload: UpdateHoldingPayload,
+): Promise<UpdateHoldingResponse> =>
+  fetchJson<UpdateHoldingResponse>(`/api/portfolios/${portfolioId}/holdings/${holdingId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+
+export const deletePortfolioHolding = (
+  portfolioId: number,
+  holdingId: number,
+): Promise<DeleteHoldingResponse> =>
+  fetchJson<DeleteHoldingResponse>(`/api/portfolios/${portfolioId}/holdings/${holdingId}`, {
+    method: 'DELETE',
   });
 
 export const getPortfolioHealth = (portfolioId: number): Promise<PortfolioHealthResponse> =>

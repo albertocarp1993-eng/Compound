@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { deletePortfolioHolding, updatePortfolioHolding } from '../api/client';
 import AssetTable from '../components/AssetTable';
 import DealRoomDrawer from '../components/DealRoomDrawer';
 import MoatDistribution from '../components/analytics/MoatDistribution';
@@ -27,6 +28,7 @@ export function CommandCenterPage(): JSX.Element {
 
   const [dealRoomPoint, setDealRoomPoint] = useState<AnalyticsMatrixPoint | null>(null);
   const [dealRoomOpen, setDealRoomOpen] = useState(false);
+  const [positionActionMessage, setPositionActionMessage] = useState<string | null>(null);
 
   const qualityLeader = useMemo(() => {
     if (dashboardData.holdings.length === 0) return null;
@@ -71,6 +73,27 @@ export function CommandCenterPage(): JSX.Element {
     );
   }
 
+  const handleUpdatePosition = async (
+    holdingId: number,
+    payload: { quantity: number; avgCost: number; dripEnabled: boolean },
+  ): Promise<void> => {
+    if (!selectedPortfolioId) return;
+
+    setPositionActionMessage(null);
+    await updatePortfolioHolding(selectedPortfolioId, holdingId, payload);
+    await Promise.all([dashboardData.refetch(), reloadPortfolios()]);
+    setPositionActionMessage('Position updated successfully.');
+  };
+
+  const handleDeletePosition = async (holdingId: number): Promise<void> => {
+    if (!selectedPortfolioId) return;
+
+    setPositionActionMessage(null);
+    await deletePortfolioHolding(selectedPortfolioId, holdingId);
+    await Promise.all([dashboardData.refetch(), reloadPortfolios()]);
+    setPositionActionMessage('Position removed from portfolio.');
+  };
+
   return (
     <>
       <section className="mb-4 rounded-xl border border-[var(--line)] bg-[color:var(--surface)] p-4">
@@ -92,6 +115,12 @@ export function CommandCenterPage(): JSX.Element {
           </div>
         </div>
       </section>
+
+      {positionActionMessage && (
+        <div className="mb-4 rounded-md border border-emerald-600/50 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">
+          {positionActionMessage}
+        </div>
+      )}
 
       <section className="grid grid-cols-12 gap-4">
         <div className="col-span-12 xl:col-span-3">
@@ -123,6 +152,8 @@ export function CommandCenterPage(): JSX.Element {
             data={dashboardData.holdings}
             loading={dashboardData.loading}
             onOpenStock={(symbol) => navigate(`/stocks/${symbol}`)}
+            onUpdatePosition={handleUpdatePosition}
+            onDeletePosition={handleDeletePosition}
           />
         </div>
       </section>
