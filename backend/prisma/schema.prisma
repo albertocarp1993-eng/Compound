@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TransactionType {
+  BUY
+  SELL
+}
+
+enum MoatRating {
+  WIDE
+  NARROW
+  NONE
+}
+
+model User {
+  id         Int         @id @default(autoincrement())
+  email      String      @unique
+  name       String
+  portfolios Portfolio[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+}
+
+model Portfolio {
+  id           Int           @id @default(autoincrement())
+  userId       Int
+  name         String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  holdings     Holding[]
+  transactions Transaction[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Asset {
+  id            Int                @id @default(autoincrement())
+  symbol        String             @unique
+  name          String
+  currentPrice  Float
+  holdings      Holding[]
+  transactions  Transaction[]
+  fundamentals  AssetFundamentals?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+}
+
+model Holding {
+  id          Int       @id @default(autoincrement())
+  portfolioId Int
+  assetId     Int
+  quantity    Float
+  avgCost     Float
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  asset       Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([portfolioId, assetId])
+}
+
+model Transaction {
+  id          Int             @id @default(autoincrement())
+  portfolioId Int
+  assetId     Int
+  type        TransactionType
+  quantity    Float
+  price       Float
+  executedAt  DateTime        @default(now())
+  portfolio   Portfolio       @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  asset       Asset           @relation(fields: [assetId], references: [id], onDelete: Cascade)
+}
+
+model AssetFundamentals {
+  id                    Int        @id @default(autoincrement())
+  asset_id              Int        @unique
+  pe_ratio              Float
+  roe                   Float
+  debt_to_equity        Float
+  dividend_safety_score Int
+  moat_rating           MoatRating
+  historical_volatility Float
+  calculated_score      Int
+  asset                 Asset      @relation(fields: [asset_id], references: [id], onDelete: Cascade)
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
+}
