@@ -106,6 +106,13 @@ export function StockDetailPage(): JSX.Element {
     );
   }
 
+  const safeMetrics = data.metrics ?? {
+    qoq: null,
+    yoy: null,
+    annualTrend: null,
+  };
+  const safeScoreModel = data.scoreModel ?? null;
+
   return (
     <>
       <section className="mb-4 rounded-xl border border-[var(--line)] bg-[color:var(--surface)] p-5">
@@ -185,9 +192,9 @@ export function StockDetailPage(): JSX.Element {
             <CardContent>
               <p
                 className="numeric text-xl font-semibold"
-                style={{ color: getScoreColor(data.scoreModel?.compositeScore ?? 0) }}
+                style={{ color: getScoreColor(safeScoreModel?.compositeScore ?? 0) }}
               >
-                {data.scoreModel?.compositeScore ?? 'N/A'}
+                {safeScoreModel?.compositeScore ?? 'N/A'}
               </p>
             </CardContent>
           </Card>
@@ -197,8 +204,8 @@ export function StockDetailPage(): JSX.Element {
               <CardTitle className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted)]">Composite Label</CardTitle>
             </CardHeader>
             <CardContent>
-              <Badge variant={data.scoreModel?.compositeScore && data.scoreModel.compositeScore >= 80 ? 'success' : data.scoreModel?.compositeScore && data.scoreModel.compositeScore >= 50 ? 'warning' : 'danger'}>
-                {data.scoreModel?.label ?? 'N/A'}
+              <Badge variant={safeScoreModel?.compositeScore && safeScoreModel.compositeScore >= 80 ? 'success' : safeScoreModel?.compositeScore && safeScoreModel.compositeScore >= 50 ? 'warning' : 'danger'}>
+                {safeScoreModel?.label ?? 'N/A'}
               </Badge>
             </CardContent>
           </Card>
@@ -263,27 +270,27 @@ export function StockDetailPage(): JSX.Element {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {data.metrics.qoq ? (
+            {safeMetrics.qoq ? (
               <>
                 <p className="mb-2 text-[11px] text-[color:var(--muted)]">
-                  {data.metrics.qoq.latestLabel} vs {data.metrics.qoq.previousLabel}
+                  {safeMetrics.qoq.latestLabel} vs {safeMetrics.qoq.previousLabel}
                 </p>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
                   <p className="text-[color:var(--muted)]">Revenue</p>
-                  <p className={`numeric text-right ${toneByMetric(data.metrics.qoq.revenueGrowthPct)}`}>
-                    {formatSignedPct(data.metrics.qoq.revenueGrowthPct)}
+                  <p className={`numeric text-right ${toneByMetric(safeMetrics.qoq.revenueGrowthPct)}`}>
+                    {formatSignedPct(safeMetrics.qoq.revenueGrowthPct)}
                   </p>
                   <p className="text-[color:var(--muted)]">Net Income</p>
-                  <p className={`numeric text-right ${toneByMetric(data.metrics.qoq.netIncomeGrowthPct)}`}>
-                    {formatSignedPct(data.metrics.qoq.netIncomeGrowthPct)}
+                  <p className={`numeric text-right ${toneByMetric(safeMetrics.qoq.netIncomeGrowthPct)}`}>
+                    {formatSignedPct(safeMetrics.qoq.netIncomeGrowthPct)}
                   </p>
                   <p className="text-[color:var(--muted)]">EPS</p>
-                  <p className={`numeric text-right ${toneByMetric(data.metrics.qoq.epsGrowthPct)}`}>
-                    {formatSignedPct(data.metrics.qoq.epsGrowthPct)}
+                  <p className={`numeric text-right ${toneByMetric(safeMetrics.qoq.epsGrowthPct)}`}>
+                    {formatSignedPct(safeMetrics.qoq.epsGrowthPct)}
                   </p>
                   <p className="text-[color:var(--muted)]">Free Cash Flow</p>
-                  <p className={`numeric text-right ${toneByMetric(data.metrics.qoq.freeCashFlowGrowthPct)}`}>
-                    {formatSignedPct(data.metrics.qoq.freeCashFlowGrowthPct)}
+                  <p className={`numeric text-right ${toneByMetric(safeMetrics.qoq.freeCashFlowGrowthPct)}`}>
+                    {formatSignedPct(safeMetrics.qoq.freeCashFlowGrowthPct)}
                   </p>
                 </div>
               </>
@@ -300,27 +307,27 @@ export function StockDetailPage(): JSX.Element {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {data.metrics.yoy ? (
+            {safeMetrics.yoy ? (
               <>
                 <p className="mb-2 text-[11px] text-[color:var(--muted)]">
-                  {data.metrics.yoy.latestLabel} vs {data.metrics.yoy.previousLabel}
+                  {safeMetrics.yoy.latestLabel} vs {safeMetrics.yoy.previousLabel}
                 </p>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
                   <p className="text-[color:var(--muted)]">Revenue</p>
-                  <p className={`numeric text-right ${toneByMetric(data.metrics.yoy.revenueGrowthPct)}`}>
-                    {formatSignedPct(data.metrics.yoy.revenueGrowthPct)}
+                  <p className={`numeric text-right ${toneByMetric(safeMetrics.yoy.revenueGrowthPct)}`}>
+                    {formatSignedPct(safeMetrics.yoy.revenueGrowthPct)}
                   </p>
                   <p className="text-[color:var(--muted)]">Net Income</p>
-                  <p className={`numeric text-right ${toneByMetric(data.metrics.yoy.netIncomeGrowthPct)}`}>
-                    {formatSignedPct(data.metrics.yoy.netIncomeGrowthPct)}
+                  <p className={`numeric text-right ${toneByMetric(safeMetrics.yoy.netIncomeGrowthPct)}`}>
+                    {formatSignedPct(safeMetrics.yoy.netIncomeGrowthPct)}
                   </p>
                   <p className="text-[color:var(--muted)]">EPS</p>
-                  <p className={`numeric text-right ${toneByMetric(data.metrics.yoy.epsGrowthPct)}`}>
-                    {formatSignedPct(data.metrics.yoy.epsGrowthPct)}
+                  <p className={`numeric text-right ${toneByMetric(safeMetrics.yoy.epsGrowthPct)}`}>
+                    {formatSignedPct(safeMetrics.yoy.epsGrowthPct)}
                   </p>
                   <p className="text-[color:var(--muted)]">Free Cash Flow</p>
-                  <p className={`numeric text-right ${toneByMetric(data.metrics.yoy.freeCashFlowGrowthPct)}`}>
-                    {formatSignedPct(data.metrics.yoy.freeCashFlowGrowthPct)}
+                  <p className={`numeric text-right ${toneByMetric(safeMetrics.yoy.freeCashFlowGrowthPct)}`}>
+                    {formatSignedPct(safeMetrics.yoy.freeCashFlowGrowthPct)}
                   </p>
                 </div>
               </>
@@ -337,21 +344,21 @@ export function StockDetailPage(): JSX.Element {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {data.metrics.annualTrend ? (
+            {safeMetrics.annualTrend ? (
               <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
                 <p className="text-[color:var(--muted)]">Window</p>
-                <p className="numeric text-right text-[color:var(--text)]">{data.metrics.annualTrend.sampleYears}Y CAGR</p>
+                <p className="numeric text-right text-[color:var(--text)]">{safeMetrics.annualTrend.sampleYears}Y CAGR</p>
                 <p className="text-[color:var(--muted)]">Revenue CAGR</p>
-                <p className={`numeric text-right ${toneByMetric(data.metrics.annualTrend.revenueCagrPct)}`}>
-                  {formatSignedPct(data.metrics.annualTrend.revenueCagrPct)}
+                <p className={`numeric text-right ${toneByMetric(safeMetrics.annualTrend.revenueCagrPct)}`}>
+                  {formatSignedPct(safeMetrics.annualTrend.revenueCagrPct)}
                 </p>
                 <p className="text-[color:var(--muted)]">EPS CAGR</p>
-                <p className={`numeric text-right ${toneByMetric(data.metrics.annualTrend.epsCagrPct)}`}>
-                  {formatSignedPct(data.metrics.annualTrend.epsCagrPct)}
+                <p className={`numeric text-right ${toneByMetric(safeMetrics.annualTrend.epsCagrPct)}`}>
+                  {formatSignedPct(safeMetrics.annualTrend.epsCagrPct)}
                 </p>
                 <p className="text-[color:var(--muted)]">FCF CAGR</p>
-                <p className={`numeric text-right ${toneByMetric(data.metrics.annualTrend.freeCashFlowCagrPct)}`}>
-                  {formatSignedPct(data.metrics.annualTrend.freeCashFlowCagrPct)}
+                <p className={`numeric text-right ${toneByMetric(safeMetrics.annualTrend.freeCashFlowCagrPct)}`}>
+                  {formatSignedPct(safeMetrics.annualTrend.freeCashFlowCagrPct)}
                 </p>
               </div>
             ) : (
@@ -373,10 +380,10 @@ export function StockDetailPage(): JSX.Element {
             </p>
           </CardHeader>
           <CardContent>
-            {data.scoreModel ? (
+            {safeScoreModel ? (
               <>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
-                  {data.scoreModel.breakdown.map((item) => (
+                  {safeScoreModel.breakdown.map((item) => (
                     <div key={item.component} className="rounded-md border border-[var(--line)] bg-[color:var(--surface-soft)] p-3">
                       <p className="text-[11px] uppercase tracking-[0.12em] text-[color:var(--muted)]">
                         {formatComponentLabel(item.component)}
@@ -405,7 +412,7 @@ export function StockDetailPage(): JSX.Element {
                       </tr>
                     </thead>
                     <tbody>
-                      {data.scoreModel.breakdown.map((item) => (
+                      {safeScoreModel.breakdown.map((item) => (
                         <tr key={`row-${item.component}`} className="border-b border-[var(--line)] text-[color:var(--text)]">
                           <td className="px-3 py-2">{formatComponentLabel(item.component)}</td>
                           <td className="numeric px-3 py-2">{item.score}</td>
@@ -430,8 +437,8 @@ export function StockDetailPage(): JSX.Element {
             name: data.name,
             currentPrice: data.currentPrice,
             fundamentals: data.fundamentals,
-            metrics: data.metrics,
-            scoreModel: data.scoreModel,
+            metrics: safeMetrics,
+            scoreModel: safeScoreModel,
             financials: data.financials,
           }}
           loading={false}

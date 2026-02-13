@@ -92,7 +92,7 @@ export type AssetFinancialsResponse = {
   name: string;
   currentPrice: number;
   fundamentals: AssetFundamentalsPayload | null;
-  metrics: AssetMetricsPayload;
-  scoreModel: AssetScoreModelPayload | null;
+  metrics?: AssetMetricsPayload;
+  scoreModel?: AssetScoreModelPayload | null;
   financials: AssetFinancialRow[];
 };

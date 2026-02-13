@@ -46,8 +46,8 @@ export type AssetComprehensiveResponse = {
     source: 'stooq' | 'local';
     asOf: string;
   };
-  metrics: AssetMetricsPayload;
-  scoreModel: AssetScoreModelPayload | null;
+  metrics?: AssetMetricsPayload;
+  scoreModel?: AssetScoreModelPayload | null;
   insights: {
     moat: string;
     valuation: string;
