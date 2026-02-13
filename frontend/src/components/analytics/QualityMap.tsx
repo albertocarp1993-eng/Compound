@@ -50,11 +50,19 @@ export function QualityMap({ data, loading = false, onSelectPoint }: QualityMapP
         <CardDescription>
           Target top-right: high quality score with lower valuation multiple.
         </CardDescription>
+        <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-[color:var(--muted)]">
+          <span className="rounded-md border border-[var(--line)] bg-[color:var(--surface-soft)] px-2 py-1">
+            X-axis: P/E (cheaper is right)
+          </span>
+          <span className="rounded-md border border-[var(--line)] bg-[color:var(--surface-soft)] px-2 py-1">
+            Y-axis: Quality Score
+          </span>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="h-[340px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <ScatterChart margin={{ top: 15, right: 16, bottom: 8, left: 8 }}>
+            <ScatterChart margin={{ top: 8, right: 16, bottom: 12, left: 10 }}>
               <CartesianGrid stroke="var(--line)" strokeDasharray="4 4" />
               <ReferenceArea
                 x1={0}
@@ -73,12 +81,7 @@ export function QualityMap({ data, loading = false, onSelectPoint }: QualityMapP
                 reversed
                 name="Valuation (P/E)"
                 tick={{ fill: 'var(--muted)', fontSize: 11 }}
-                label={{
-                  value: 'Valuation (P/E) - cheaper is right',
-                  position: 'insideBottom',
-                  offset: -4,
-                  fill: 'var(--muted)',
-                }}
+                tickMargin={8}
               />
               <YAxis
                 type="number"
@@ -86,12 +89,7 @@ export function QualityMap({ data, loading = false, onSelectPoint }: QualityMapP
                 domain={[0, 100]}
                 name="Quality Score"
                 tick={{ fill: 'var(--muted)', fontSize: 11 }}
-                label={{
-                  value: 'Quality Score',
-                  angle: -90,
-                  position: 'insideLeft',
-                  fill: 'var(--muted)',
-                }}
+                tickMargin={8}
               />
               <ZAxis type="number" dataKey="z" range={[90, 1300]} name="Position Value" />
               <Tooltip

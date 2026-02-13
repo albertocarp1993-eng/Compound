@@ -69,7 +69,7 @@ export function FinancialStatementsPanel({
           <CardTitle>Company Financials</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-zinc-400">Select a company to view financial statements.</p>
+          <p className="text-sm text-[color:var(--muted)]">Select a company to view financial statements.</p>
         </CardContent>
       </Card>
     );
@@ -134,7 +134,7 @@ export function FinancialStatementsPanel({
 
         <div className="mb-5 h-[280px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 8, right: 14, left: 10, bottom: 8 }}>
+            <LineChart data={chartData} margin={{ top: 14, right: 14, left: 10, bottom: 30 }}>
               <CartesianGrid strokeDasharray="4 4" stroke="var(--line)" />
               <XAxis dataKey="year" tick={{ fill: 'var(--muted)', fontSize: 11 }} />
               <YAxis tick={{ fill: 'var(--muted)', fontSize: 11 }} />
@@ -147,10 +147,10 @@ export function FinancialStatementsPanel({
                   color: 'var(--text)',
                 }}
               />
-              <Legend />
-              <Line type="monotone" dataKey="Revenue" stroke="#38bdf8" strokeWidth={2} dot />
-              <Line type="monotone" dataKey="Net Income" stroke="#22c55e" strokeWidth={2} dot />
-              <Line type="monotone" dataKey="Free Cash Flow" stroke="#f59e0b" strokeWidth={2} dot />
+              <Legend verticalAlign="bottom" height={24} wrapperStyle={{ color: 'var(--muted)', fontSize: 11 }} />
+              <Line type="monotone" dataKey="Revenue" stroke="#38bdf8" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="Net Income" stroke="#22c55e" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="Free Cash Flow" stroke="#f59e0b" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>

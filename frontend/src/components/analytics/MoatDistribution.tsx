@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { AnalyticsMatrixPoint } from '../../types/analytics';
 import { MoatRating } from '../../types/scoring';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
@@ -89,9 +89,8 @@ export function MoatDistribution({ data, height = 260, loading = false }: MoatDi
                 nameKey="moatRating"
                 cx="50%"
                 cy="50%"
-                outerRadius={90}
+                outerRadius={86}
                 innerRadius={42}
-                label={({ moatRating, weight }) => `${labelByMoat[moatRating as MoatRating]} ${weight.toFixed(0)}%`}
               >
                 {slices.map((slice) => (
                   <Cell key={slice.moatRating} fill={moatColors[slice.moatRating]} />
@@ -109,7 +108,6 @@ export function MoatDistribution({ data, height = 260, loading = false }: MoatDi
                   return [formatCurrency(Number(value)), labelByMoat[moatRating]];
                 }}
               />
-              <Legend formatter={(value) => labelByMoat[value as MoatRating]} />
             </PieChart>
           </ResponsiveContainer>
 
@@ -117,6 +115,23 @@ export function MoatDistribution({ data, height = 260, loading = false }: MoatDi
             <p className="text-[10px] uppercase tracking-[0.14em] text-[color:var(--muted)]">Protected Capital</p>
             <p className="numeric text-base font-semibold text-[color:var(--text)]">{formatCurrency(totalCapital)}</p>
           </div>
+        </div>
+
+        <div className="mt-2 grid grid-cols-1 gap-1 text-xs">
+          {slices.map((slice) => (
+            <div
+              key={slice.moatRating}
+              className="flex items-center justify-between rounded-md border border-[var(--line)] bg-[color:var(--surface-soft)] px-2 py-1.5"
+            >
+              <span className="inline-flex items-center gap-2 text-[color:var(--text)]">
+                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: moatColors[slice.moatRating] }} />
+                {labelByMoat[slice.moatRating]}
+              </span>
+              <span className="numeric text-[color:var(--muted)]">
+                {slice.weight.toFixed(1)}% • {formatCurrency(slice.capital)}
+              </span>
+            </div>
+          ))}
         </div>
       </CardContent>
     </Card>

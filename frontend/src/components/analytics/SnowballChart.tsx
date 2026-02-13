@@ -26,6 +26,12 @@ const formatDate = (value: string): string =>
     month: 'short',
   });
 
+const formatDateShort = (value: string): string =>
+  new Date(value).toLocaleDateString('en-US', {
+    year: '2-digit',
+    month: 'short',
+  });
+
 type SnowballChartProps = {
   data: SnowballPoint[];
   loading?: boolean;
@@ -55,9 +61,20 @@ export function SnowballChart({ data, loading = false }: SnowballChartProps): JS
         </CardDescription>
       </CardHeader>
       <CardContent>
+        <div className="mb-3 flex flex-wrap gap-2 text-[11px]">
+          <span className="inline-flex items-center gap-1 rounded-md border border-[var(--line)] bg-[color:var(--surface-soft)] px-2 py-1 text-[color:var(--muted)]">
+            <span className="h-2 w-2 rounded-full bg-sky-400" /> Invested Capital
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-md border border-[var(--line)] bg-[color:var(--surface-soft)] px-2 py-1 text-[color:var(--muted)]">
+            <span className="h-2 w-2 rounded-full bg-emerald-400" /> Compound Interest
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-md border border-[var(--line)] bg-[color:var(--surface-soft)] px-2 py-1 text-[color:var(--muted)]">
+            <span className="h-2 w-2 rounded-full bg-amber-400" /> Future Income
+          </span>
+        </div>
         <div className="h-[340px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data} margin={{ top: 12, right: 16, left: 8, bottom: 10 }}>
+            <ComposedChart data={data} margin={{ top: 6, right: 16, left: 8, bottom: 44 }}>
               <defs>
                 <linearGradient id="snowballCompound" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#34d399" stopOpacity={0.95} />
@@ -67,12 +84,15 @@ export function SnowballChart({ data, loading = false }: SnowballChartProps): JS
               <CartesianGrid strokeDasharray="4 4" stroke="var(--line)" />
               <XAxis
                 dataKey="date"
-                tickFormatter={formatDate}
+                tickFormatter={formatDateShort}
                 minTickGap={45}
+                tickMargin={8}
+                interval="preserveStartEnd"
                 tick={{ fill: 'var(--muted)', fontSize: 11 }}
               />
               <YAxis
                 tickFormatter={(value) => `$${Math.round(value / 1000)}k`}
+                tickMargin={8}
                 tick={{ fill: 'var(--muted)', fontSize: 11 }}
               />
               <Tooltip
@@ -114,10 +134,10 @@ export function SnowballChart({ data, loading = false }: SnowballChartProps): JS
               />
               <Brush
                 dataKey="date"
-                height={22}
+                height={26}
                 travellerWidth={10}
                 stroke="#60a5fa"
-                tickFormatter={formatDate}
+                tickFormatter={formatDateShort}
               />
             </ComposedChart>
           </ResponsiveContainer>
