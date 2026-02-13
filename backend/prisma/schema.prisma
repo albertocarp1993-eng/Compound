@@ -18,6 +18,17 @@ enum MoatRating {
   NONE
 }
 
+enum StatementPeriod {
+  ANNUAL
+  QUARTERLY
+}
+
+enum Verdict {
+  BUY
+  HOLD
+  TRIM
+}
+
 model User {
   id         Int         @id @default(autoincrement())
   email      String      @unique
@@ -34,6 +45,7 @@ model Portfolio {
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   holdings     Holding[]
   transactions Transaction[]
+  snapshots    PortfolioSnapshot[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 }
@@ -43,9 +55,13 @@ model Asset {
   symbol        String             @unique
   name          String
   currentPrice  Float
+  moat_rating   MoatRating         @default(NONE)
+  dividend_safety Int              @default(50)
+  fcf_yield     Float              @default(0)
   holdings      Holding[]
   transactions  Transaction[]
   fundamentals  AssetFundamentals?
+  financials    AssetFinancials[]
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
 }
@@ -56,6 +72,7 @@ model Holding {
   assetId     Int
   quantity    Float
   avgCost     Float
+  drip_enabled Boolean  @default(true)
   portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
   asset       Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
 
@@ -80,11 +97,53 @@ model AssetFundamentals {
   pe_ratio              Float
   roe                   Float
   debt_to_equity        Float
+  payout_ratio          Float      @default(0)
+  dividend_growth_streak Int      @default(0)
   dividend_safety_score Int
   moat_rating           MoatRating
   historical_volatility Float
+  health_rating         Int        @default(50)
+  verdict               Verdict    @default(HOLD)
   calculated_score      Int
   asset                 Asset      @relation(fields: [asset_id], references: [id], onDelete: Cascade)
   createdAt             DateTime   @default(now())
   updatedAt             DateTime   @updatedAt
+}
+
+model AssetFinancials {
+  id                Int             @id @default(autoincrement())
+  asset_id          Int
+  period            StatementPeriod @default(ANNUAL)
+  fiscal_year       Int
+  fiscal_period     String          @default("FY")
+  revenue           Float
+  gross_profit      Float
+  operating_income  Float
+  net_income        Float
+  eps               Float
+  free_cash_flow    Float
+  total_assets      Float
+  total_liabilities Float
+  total_equity      Float
+  dividends_per_share Float
+  asset             Asset           @relation(fields: [asset_id], references: [id], onDelete: Cascade)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@unique([asset_id, period, fiscal_year, fiscal_period])
+}
+
+model PortfolioSnapshot {
+  id               Int       @id @default(autoincrement())
+  portfolioId      Int
+  date             DateTime
+  total_value      Float
+  total_dividends  Float
+  invested_capital Float
+  future_income    Float
+  portfolio        Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([portfolioId, date])
 }

@@ -5,12 +5,28 @@ export default {
   theme: {
     extend: {
       colors: {
-        snow: {
-          50: '#f8fafc',
-          100: '#f1f5f9',
-          600: '#334155',
-          900: '#0f172a',
+        midnight: {
+          950: '#070b14',
+          900: '#0b1220',
+          850: '#111827',
+          800: '#1f2937',
         },
+        signal: {
+          green: '#22c55e',
+          yellow: '#eab308',
+          red: '#ef4444',
+          blue: '#38bdf8',
+          gold: '#f59e0b',
+        },
+      },
+      keyframes: {
+        'fade-in-up': {
+          '0%': { opacity: '0', transform: 'translateY(8px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+      },
+      animation: {
+        'fade-in-up': 'fade-in-up 420ms ease-out',
       },
     },
   },

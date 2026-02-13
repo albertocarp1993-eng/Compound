@@ -7,7 +7,13 @@ type StockCardProps = {
   price: number;
   score: number;
   moatRating: MoatRating;
+  peRatio?: number;
+  roe?: number;
+  debtToEquity?: number;
+  dividendSafetyScore?: number;
   breakdown: ScoreBreakdownItem[];
+  selected?: boolean;
+  onSelect?: () => void;
 };
 
 const moatTagStyles: Record<MoatRating, string> = {
@@ -29,12 +35,22 @@ export function StockCard({
   price,
   score,
   moatRating,
+  peRatio,
+  roe,
+  debtToEquity,
+  dividendSafetyScore,
   breakdown,
+  selected = false,
+  onSelect,
 }: StockCardProps): JSX.Element {
   const color = getScoreColor(score);
 
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <article
+      className={`rounded-2xl border bg-white p-5 shadow-sm transition ${
+        selected ? 'border-sky-300 ring-2 ring-sky-100' : 'border-slate-200'
+      }`}
+    >
       <header className="mb-4 flex items-center justify-between gap-4">
         <div>
           <p className="text-xs uppercase tracking-wider text-slate-500">{symbol}</p>
@@ -61,6 +77,27 @@ export function StockCard({
           </div>
         </div>
       </header>
+
+      <div className="mb-4 grid grid-cols-2 gap-2 text-xs text-slate-600 md:grid-cols-4">
+        <div className="rounded-lg bg-slate-50 px-3 py-2">
+          <p className="uppercase tracking-wide text-slate-500">P/E</p>
+          <p className="font-semibold text-slate-900">{peRatio?.toFixed(2) ?? 'N/A'}</p>
+        </div>
+        <div className="rounded-lg bg-slate-50 px-3 py-2">
+          <p className="uppercase tracking-wide text-slate-500">ROE</p>
+          <p className="font-semibold text-slate-900">{roe !== undefined ? `${roe.toFixed(1)}%` : 'N/A'}</p>
+        </div>
+        <div className="rounded-lg bg-slate-50 px-3 py-2">
+          <p className="uppercase tracking-wide text-slate-500">Debt/Equity</p>
+          <p className="font-semibold text-slate-900">{debtToEquity?.toFixed(2) ?? 'N/A'}</p>
+        </div>
+        <div className="rounded-lg bg-slate-50 px-3 py-2">
+          <p className="uppercase tracking-wide text-slate-500">Dividend Safety</p>
+          <p className="font-semibold text-slate-900">
+            {dividendSafetyScore !== undefined ? `${dividendSafetyScore}/100` : 'N/A'}
+          </p>
+        </div>
+      </div>
 
       <div>
         <h4 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-600">
@@ -91,6 +128,16 @@ export function StockCard({
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="mt-4 flex justify-end">
+        <button
+          type="button"
+          onClick={onSelect}
+          className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-700 hover:border-sky-300 hover:text-sky-700"
+        >
+          Open Stock Page
+        </button>
       </div>
     </article>
   );

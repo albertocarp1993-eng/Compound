@@ -2,45 +2,44 @@ import { describe, expect, it } from 'vitest';
 import { calculateAssetScore, calculateAssetScoreDetails } from '../services/scoringService';
 
 describe('calculateAssetScore', () => {
-  it('rewards high quality moat and profitability while clamping to 100', () => {
+  it('rewards wide moat + long dividend streak + safe payout', () => {
     const score = calculateAssetScore({
-      pe_ratio: 14,
-      roe: 180,
-      debt_to_equity: 0.3,
-      dividend_safety_score: 95,
+      debt_to_equity: 0.7,
+      payout_ratio: 42,
+      dividend_growth_streak: 18,
       moat_rating: 'WIDE',
-      historical_volatility: 0.18,
     });
 
-    expect(score).toBe(100);
+    expect(score).toBe(95);
   });
 
-  it('penalizes risky fundamentals and clamps lower bound to 0', () => {
+  it('penalizes excessive leverage and can result in trim territory', () => {
     const score = calculateAssetScore({
-      pe_ratio: 0,
-      roe: -40,
-      debt_to_equity: 6.5,
-      dividend_safety_score: 0,
+      debt_to_equity: 3.4,
+      payout_ratio: 88,
+      dividend_growth_streak: 0,
       moat_rating: 'NONE',
-      historical_volatility: 1.4,
     });
 
-    expect(score).toBe(0);
+    expect(score).toBe(35);
   });
 
-  it('returns deterministic detailed breakdown', () => {
+  it('returns deterministic detailed breakdown and verdict', () => {
     const details = calculateAssetScoreDetails({
-      pe_ratio: 30,
-      roe: 20,
-      debt_to_equity: 2.6,
-      dividend_safety_score: 70,
+      debt_to_equity: 1.9,
+      payout_ratio: 55,
+      dividend_growth_streak: 12,
       moat_rating: 'NARROW',
-      historical_volatility: 0.35,
     });
 
     expect(details.breakdown).toHaveLength(6);
     expect(details.score).toBeGreaterThanOrEqual(0);
     expect(details.score).toBeLessThanOrEqual(100);
+    expect(details.healthRating).toBe(details.score);
+    expect(details.verdict).toBe('HOLD');
     expect(details.breakdown.find((item) => item.metric === 'Moat')?.points).toBe(10);
+    expect(
+      details.breakdown.find((item) => item.metric === 'Dividend Growth Streak')?.points,
+    ).toBe(15);
   });
 });

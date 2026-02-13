@@ -11,3 +11,14 @@ export type PortfoliosResponse = {
   count: number;
   portfolios: PortfolioSummary[];
 };
+
+export type CreatePortfolioPayload = {
+  name: string;
+  userId?: number;
+  userName?: string;
+  userEmail?: string;
+};
+
+export type CreatePortfolioResponse = {
+  portfolio: PortfolioSummary;
+};

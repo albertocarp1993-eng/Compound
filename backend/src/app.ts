@@ -1,6 +1,7 @@
 import cors from 'cors';
 import express from 'express';
 import analyticsRouter from './routes/analytics.routes';
+import assetRouter from './routes/assets.routes';
 import portfolioRouter from './routes/portfolios.routes';
 
 export const createApp = () => {
@@ -19,6 +20,7 @@ export const createApp = () => {
 
   app.use(portfolioRouter);
   app.use(analyticsRouter);
+  app.use(assetRouter);
 
   return app;
 };

@@ -1,14 +1,21 @@
-import { AssetFundamentals, MoatRating } from '@prisma/client';
+import { AssetFundamentals, MoatRating, Verdict } from '@prisma/client';
 
 export type ScoringInput = Pick<
   AssetFundamentals,
-  | 'pe_ratio'
-  | 'roe'
-  | 'debt_to_equity'
-  | 'dividend_safety_score'
   | 'moat_rating'
-  | 'historical_volatility'
->;
+  | 'debt_to_equity'
+  | 'dividend_growth_streak'
+  | 'payout_ratio'
+> &
+  Partial<
+    Pick<
+      AssetFundamentals,
+      | 'pe_ratio'
+      | 'roe'
+      | 'dividend_safety_score'
+      | 'historical_volatility'
+    >
+  >;
 
 export type ScoreBreakdownItem = {
   metric: string;
@@ -19,6 +26,8 @@ export type ScoreBreakdownItem = {
 
 export type ScoreDetails = {
   score: number;
+  healthRating: number;
+  verdict: Verdict;
   breakdown: ScoreBreakdownItem[];
 };
 
@@ -31,41 +40,19 @@ const moatPoints = (moat: MoatRating): number => {
   return 0;
 };
 
-const valuationPoints = (peRatio: number): number => {
-  if (peRatio <= 0) return -10;
-  if (peRatio <= 15) return 12;
-  if (peRatio <= 25) return 5;
-
-  // Penalize expensive assets above threshold.
-  const penalty = (peRatio - 25) * 0.8;
-  return -clamp(penalty, 0, 25);
+const dividendGrowthPoints = (dividendGrowthStreak: number): number => {
+  if (dividendGrowthStreak > 10) return 15;
+  return 0;
 };
 
-const profitabilityPoints = (roe: number): number => {
-  const scaled = roe / 5;
-  return clamp(scaled, -20, 30);
-};
+const payoutPoints = (payoutRatio: number): number => (payoutRatio < 60 ? 10 : 0);
 
-const debtPoints = (debtToEquity: number): number => {
-  if (debtToEquity <= 0.5) return 8;
-  if (debtToEquity <= 1.0) return 5;
-  if (debtToEquity <= 2.0) return 0;
+const debtPoints = (debtToEquity: number): number => (debtToEquity > 1.5 ? -15 : 0);
 
-  const penalty = (debtToEquity - 2.0) * 10;
-  return -clamp(penalty, 0, 25);
-};
-
-const dividendSafetyPoints = (dividendSafetyScore: number): number => {
-  const normalized = clamp(dividendSafetyScore, 0, 100);
-  return (normalized - 50) / 5;
-};
-
-const volatilityPoints = (historicalVolatility: number): number => {
-  if (historicalVolatility <= 0.2) return 5;
-  if (historicalVolatility <= 0.4) return 0;
-
-  const penalty = (historicalVolatility - 0.4) * 30;
-  return -clamp(penalty, 0, 10);
+const verdictFromScore = (score: number): Verdict => {
+  if (score >= 80) return 'BUY';
+  if (score >= 55) return 'HOLD';
+  return 'TRIM';
 };
 
 export const calculateAssetScoreDetails = (
@@ -74,6 +61,12 @@ export const calculateAssetScoreDetails = (
   const breakdown: ScoreBreakdownItem[] = [];
 
   const base = 50;
+  breakdown.push({
+    metric: 'Base',
+    value: 'Starting point',
+    points: base,
+    reason: 'All assets begin with a neutral baseline.',
+  });
 
   const moat = moatPoints(fundamentals.moat_rating);
   breakdown.push({
@@ -88,61 +81,54 @@ export const calculateAssetScoreDetails = (
           : 'No structural advantage identified.',
   });
 
-  const valuation = valuationPoints(fundamentals.pe_ratio);
+  const dividendGrowthStreak = fundamentals.dividend_growth_streak ?? 0;
+  const dividendGrowth = dividendGrowthPoints(dividendGrowthStreak);
   breakdown.push({
-    metric: 'Valuation (P/E)',
-    value: fundamentals.pe_ratio.toFixed(2),
-    points: valuation,
+    metric: 'Dividend Growth Streak',
+    value: `${dividendGrowthStreak} years`,
+    points: dividendGrowth,
     reason:
-      fundamentals.pe_ratio > 25
-        ? 'Expensive relative valuation.'
-        : 'Reasonable or attractive valuation.',
+      dividendGrowthStreak > 10
+        ? 'Long streak supports long-term compounding confidence.'
+        : 'Short or no streak gets no bonus.',
   });
 
-  const profitability = profitabilityPoints(fundamentals.roe);
+  const payoutRatio = fundamentals.payout_ratio ?? 100;
+  const payout = payoutPoints(payoutRatio);
   breakdown.push({
-    metric: 'Profitability (ROE)',
-    value: `${fundamentals.roe.toFixed(2)}%`,
-    points: profitability,
-    reason: 'Higher ROE gets a direct quality boost.',
+    metric: 'Payout Ratio',
+    value: `${payoutRatio.toFixed(2)}%`,
+    points: payout,
+    reason:
+      payoutRatio < 60
+        ? 'Low payout ratio provides dividend safety headroom.'
+        : 'No bonus above target payout threshold.',
   });
 
-  const debt = debtPoints(fundamentals.debt_to_equity);
+  const debtToEquity = fundamentals.debt_to_equity ?? 2;
+  const debt = debtPoints(debtToEquity);
   breakdown.push({
     metric: 'Debt / Equity',
-    value: fundamentals.debt_to_equity.toFixed(2),
+    value: debtToEquity.toFixed(2),
     points: debt,
     reason:
-      fundamentals.debt_to_equity > 2.0
-        ? 'Leverage above risk threshold.'
-        : 'Balance sheet leverage is manageable.',
+      debtToEquity > 1.5
+        ? 'Leverage above threshold reduces score.'
+        : 'Leverage within preferred range.',
   });
 
-  const dividendSafety = dividendSafetyPoints(fundamentals.dividend_safety_score);
+  const rawScore = base + moat + dividendGrowth + payout + debt;
+  const healthRating = Math.round(clamp(rawScore, 0, 100));
+  const verdict = verdictFromScore(healthRating);
+
   breakdown.push({
-    metric: 'Dividend Safety',
-    value: `${fundamentals.dividend_safety_score}/100`,
-    points: dividendSafety,
-    reason: 'Safer dividends improve defensive quality.',
+    metric: 'Verdict',
+    value: verdict,
+    points: 0,
+    reason: 'Final recommendation from the health rating band.',
   });
 
-  const volatility = volatilityPoints(fundamentals.historical_volatility);
-  breakdown.push({
-    metric: 'Historical Volatility',
-    value: fundamentals.historical_volatility.toFixed(2),
-    points: volatility,
-    reason:
-      fundamentals.historical_volatility > 0.4
-        ? 'Higher volatility reduces quality confidence.'
-        : 'Stable price behavior supports quality.',
-  });
-
-  const rawScore =
-    base + moat + valuation + profitability + debt + dividendSafety + volatility;
-
-  const score = Math.round(clamp(rawScore, 0, 100));
-
-  return { score, breakdown };
+  return { score: healthRating, healthRating, verdict, breakdown };
 };
 
 export const calculateAssetScore = (
