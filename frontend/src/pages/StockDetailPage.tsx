@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Newspaper, ShieldCheck, TrendingDown, TrendingUp } from 'lucide-react';
+import { BarChart3, Newspaper, ShieldCheck, TrendingDown, TrendingUp } from 'lucide-react';
 import { getAssetComprehensive } from '../api/client';
 import FinancialStatementsPanel from '../components/FinancialStatementsPanel';
 import { Badge } from '../components/ui/badge';
@@ -23,6 +23,27 @@ const formatLarge = (value: number | null): string => {
     notation: 'compact',
     maximumFractionDigits: 2,
   }).format(value);
+};
+
+const formatSignedPct = (value: number | null): string => {
+  if (value === null) return 'N/A';
+  const sign = value > 0 ? '+' : '';
+  return `${sign}${value.toFixed(2)}%`;
+};
+
+const toneByMetric = (value: number | null): string => {
+  if (value === null) return 'text-[color:var(--muted)]';
+  return value >= 0 ? 'text-emerald-400' : 'text-rose-400';
+};
+
+const formatComponentLabel = (
+  component: 'valuation' | 'growth' | 'profitability' | 'safety' | 'moat',
+): string => {
+  if (component === 'valuation') return 'Valuation';
+  if (component === 'growth') return 'Growth';
+  if (component === 'profitability') return 'Profitability';
+  if (component === 'safety') return 'Safety';
+  return 'Moat';
 };
 
 export function StockDetailPage(): JSX.Element {
@@ -103,7 +124,7 @@ export function StockDetailPage(): JSX.Element {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-7">
           <Card>
             <CardHeader className="pb-1">
               <CardTitle className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted)]">Price</CardTitle>
@@ -153,6 +174,31 @@ export function StockDetailPage(): JSX.Element {
             <CardContent>
               <Badge variant={data.fundamentals?.verdict === 'BUY' ? 'success' : data.fundamentals?.verdict === 'HOLD' ? 'warning' : 'danger'}>
                 {data.fundamentals?.verdict ?? 'N/A'}
+              </Badge>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-1">
+              <CardTitle className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted)]">Composite 0-100</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p
+                className="numeric text-xl font-semibold"
+                style={{ color: getScoreColor(data.scoreModel?.compositeScore ?? 0) }}
+              >
+                {data.scoreModel?.compositeScore ?? 'N/A'}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-1">
+              <CardTitle className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted)]">Composite Label</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Badge variant={data.scoreModel?.compositeScore && data.scoreModel.compositeScore >= 80 ? 'success' : data.scoreModel?.compositeScore && data.scoreModel.compositeScore >= 50 ? 'warning' : 'danger'}>
+                {data.scoreModel?.label ?? 'N/A'}
               </Badge>
             </CardContent>
           </Card>
@@ -209,6 +255,174 @@ export function StockDetailPage(): JSX.Element {
           </Card>
       </section>
 
+      <section className="mb-4 grid grid-cols-1 gap-3 xl:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-1">
+            <CardTitle className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted)]">
+              Quarter over Quarter
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data.metrics.qoq ? (
+              <>
+                <p className="mb-2 text-[11px] text-[color:var(--muted)]">
+                  {data.metrics.qoq.latestLabel} vs {data.metrics.qoq.previousLabel}
+                </p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                  <p className="text-[color:var(--muted)]">Revenue</p>
+                  <p className={`numeric text-right ${toneByMetric(data.metrics.qoq.revenueGrowthPct)}`}>
+                    {formatSignedPct(data.metrics.qoq.revenueGrowthPct)}
+                  </p>
+                  <p className="text-[color:var(--muted)]">Net Income</p>
+                  <p className={`numeric text-right ${toneByMetric(data.metrics.qoq.netIncomeGrowthPct)}`}>
+                    {formatSignedPct(data.metrics.qoq.netIncomeGrowthPct)}
+                  </p>
+                  <p className="text-[color:var(--muted)]">EPS</p>
+                  <p className={`numeric text-right ${toneByMetric(data.metrics.qoq.epsGrowthPct)}`}>
+                    {formatSignedPct(data.metrics.qoq.epsGrowthPct)}
+                  </p>
+                  <p className="text-[color:var(--muted)]">Free Cash Flow</p>
+                  <p className={`numeric text-right ${toneByMetric(data.metrics.qoq.freeCashFlowGrowthPct)}`}>
+                    {formatSignedPct(data.metrics.qoq.freeCashFlowGrowthPct)}
+                  </p>
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-[color:var(--muted)]">QoQ metrics need at least two quarterly filings.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-1">
+            <CardTitle className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted)]">
+              Year over Year
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data.metrics.yoy ? (
+              <>
+                <p className="mb-2 text-[11px] text-[color:var(--muted)]">
+                  {data.metrics.yoy.latestLabel} vs {data.metrics.yoy.previousLabel}
+                </p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                  <p className="text-[color:var(--muted)]">Revenue</p>
+                  <p className={`numeric text-right ${toneByMetric(data.metrics.yoy.revenueGrowthPct)}`}>
+                    {formatSignedPct(data.metrics.yoy.revenueGrowthPct)}
+                  </p>
+                  <p className="text-[color:var(--muted)]">Net Income</p>
+                  <p className={`numeric text-right ${toneByMetric(data.metrics.yoy.netIncomeGrowthPct)}`}>
+                    {formatSignedPct(data.metrics.yoy.netIncomeGrowthPct)}
+                  </p>
+                  <p className="text-[color:var(--muted)]">EPS</p>
+                  <p className={`numeric text-right ${toneByMetric(data.metrics.yoy.epsGrowthPct)}`}>
+                    {formatSignedPct(data.metrics.yoy.epsGrowthPct)}
+                  </p>
+                  <p className="text-[color:var(--muted)]">Free Cash Flow</p>
+                  <p className={`numeric text-right ${toneByMetric(data.metrics.yoy.freeCashFlowGrowthPct)}`}>
+                    {formatSignedPct(data.metrics.yoy.freeCashFlowGrowthPct)}
+                  </p>
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-[color:var(--muted)]">YoY metrics require the same quarter from last year.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-1">
+            <CardTitle className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted)]">
+              Annual Growth Trend
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data.metrics.annualTrend ? (
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                <p className="text-[color:var(--muted)]">Window</p>
+                <p className="numeric text-right text-[color:var(--text)]">{data.metrics.annualTrend.sampleYears}Y CAGR</p>
+                <p className="text-[color:var(--muted)]">Revenue CAGR</p>
+                <p className={`numeric text-right ${toneByMetric(data.metrics.annualTrend.revenueCagrPct)}`}>
+                  {formatSignedPct(data.metrics.annualTrend.revenueCagrPct)}
+                </p>
+                <p className="text-[color:var(--muted)]">EPS CAGR</p>
+                <p className={`numeric text-right ${toneByMetric(data.metrics.annualTrend.epsCagrPct)}`}>
+                  {formatSignedPct(data.metrics.annualTrend.epsCagrPct)}
+                </p>
+                <p className="text-[color:var(--muted)]">FCF CAGR</p>
+                <p className={`numeric text-right ${toneByMetric(data.metrics.annualTrend.freeCashFlowCagrPct)}`}>
+                  {formatSignedPct(data.metrics.annualTrend.freeCashFlowCagrPct)}
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-[color:var(--muted)]">Need at least two annual statements to compute CAGR.</p>
+            )}
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="mb-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg text-[color:var(--text)]">
+              <BarChart3 className="h-5 w-5 text-emerald-400" />
+              Composite Quality Model
+            </CardTitle>
+            <p className="text-xs text-[color:var(--muted)]">
+              Weighted 0-100 score on valuation, growth, profitability, safety, and moat.
+            </p>
+          </CardHeader>
+          <CardContent>
+            {data.scoreModel ? (
+              <>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
+                  {data.scoreModel.breakdown.map((item) => (
+                    <div key={item.component} className="rounded-md border border-[var(--line)] bg-[color:var(--surface-soft)] p-3">
+                      <p className="text-[11px] uppercase tracking-[0.12em] text-[color:var(--muted)]">
+                        {formatComponentLabel(item.component)}
+                      </p>
+                      <p className="numeric text-lg font-semibold text-[color:var(--text)]">{item.score}</p>
+                      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[color:var(--line)]">
+                        <div
+                          className="h-full rounded-full bg-emerald-400"
+                          style={{ width: `${item.score}%` }}
+                        />
+                      </div>
+                      <p className="mt-2 text-[11px] text-[color:var(--muted)]">
+                        Weight {(item.weight * 100).toFixed(0)}% | Contribution {item.weightedContribution.toFixed(1)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-4 overflow-x-auto">
+                  <table className="w-full border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-[var(--line)] bg-[color:var(--surface-soft)] text-left text-[color:var(--muted)]">
+                        <th className="px-3 py-2 font-semibold uppercase tracking-[0.12em]">Component</th>
+                        <th className="px-3 py-2 font-semibold uppercase tracking-[0.12em]">Score</th>
+                        <th className="px-3 py-2 font-semibold uppercase tracking-[0.12em]">Why</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.scoreModel.breakdown.map((item) => (
+                        <tr key={`row-${item.component}`} className="border-b border-[var(--line)] text-[color:var(--text)]">
+                          <td className="px-3 py-2">{formatComponentLabel(item.component)}</td>
+                          <td className="numeric px-3 py-2">{item.score}</td>
+                          <td className="px-3 py-2 text-[color:var(--muted)]">{item.reason}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-[color:var(--muted)]">Composite model is unavailable for this symbol.</p>
+            )}
+          </CardContent>
+        </Card>
+      </section>
+
       <section className="mb-4">
         <FinancialStatementsPanel
           data={{
@@ -216,6 +430,8 @@ export function StockDetailPage(): JSX.Element {
             name: data.name,
             currentPrice: data.currentPrice,
             fundamentals: data.fundamentals,
+            metrics: data.metrics,
+            scoreModel: data.scoreModel,
             financials: data.financials,
           }}
           loading={false}

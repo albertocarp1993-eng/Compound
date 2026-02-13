@@ -35,10 +35,64 @@ export type AssetFundamentalsPayload = {
   snowballScore: number;
 };
 
+export type PeriodComparisonMetrics = {
+  latestLabel: string;
+  previousLabel: string;
+  revenueGrowthPct: number | null;
+  netIncomeGrowthPct: number | null;
+  epsGrowthPct: number | null;
+  freeCashFlowGrowthPct: number | null;
+  grossMarginDeltaPct: number | null;
+  operatingMarginDeltaPct: number | null;
+  netMarginDeltaPct: number | null;
+  freeCashFlowMarginDeltaPct: number | null;
+};
+
+export type AnnualTrendMetrics = {
+  sampleYears: number;
+  revenueCagrPct: number | null;
+  epsCagrPct: number | null;
+  freeCashFlowCagrPct: number | null;
+};
+
+export type AssetMetricsPayload = {
+  qoq: PeriodComparisonMetrics | null;
+  yoy: PeriodComparisonMetrics | null;
+  annualTrend: AnnualTrendMetrics | null;
+};
+
+export type AssetScoreModelPayload = {
+  compositeScore: number;
+  label: 'ELITE' | 'STRONG' | 'WATCH' | 'RISK';
+  components: {
+    valuation: number;
+    growth: number;
+    profitability: number;
+    safety: number;
+    moat: number;
+  };
+  weights: {
+    valuation: number;
+    growth: number;
+    profitability: number;
+    safety: number;
+    moat: number;
+  };
+  breakdown: Array<{
+    component: 'valuation' | 'growth' | 'profitability' | 'safety' | 'moat';
+    score: number;
+    weight: number;
+    weightedContribution: number;
+    reason: string;
+  }>;
+};
+
 export type AssetFinancialsResponse = {
   symbol: string;
   name: string;
   currentPrice: number;
   fundamentals: AssetFundamentalsPayload | null;
+  metrics: AssetMetricsPayload;
+  scoreModel: AssetScoreModelPayload | null;
   financials: AssetFinancialRow[];
 };

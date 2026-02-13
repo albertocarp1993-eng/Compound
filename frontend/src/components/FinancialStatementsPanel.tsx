@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   CartesianGrid,
   Legend,
@@ -34,6 +35,8 @@ export function FinancialStatementsPanel({
   loading,
   error,
 }: FinancialStatementsPanelProps): JSX.Element {
+  const [statementPeriod, setStatementPeriod] = useState<'ANNUAL' | 'QUARTERLY'>('ANNUAL');
+
   if (loading) {
     return (
       <Card>
@@ -75,11 +78,25 @@ export function FinancialStatementsPanel({
     );
   }
 
-  const latest = data.financials[0];
-  const chartData = [...data.financials]
+  const annualRows = data.financials.filter((row) => row.period === 'ANNUAL');
+  const quarterlyRows = data.financials.filter((row) => row.period === 'QUARTERLY');
+  const baseRows = statementPeriod === 'QUARTERLY'
+    ? quarterlyRows
+    : annualRows.length > 0
+      ? annualRows
+      : data.financials;
+
+  const rowsForDisplay = [...baseRows].sort((a, b) => {
+    if (a.fiscalYear !== b.fiscalYear) return b.fiscalYear - a.fiscalYear;
+    const periodRank: Record<string, number> = { Q4: 4, Q3: 3, Q2: 2, Q1: 1, FY: 0 };
+    return (periodRank[b.fiscalPeriod] ?? 0) - (periodRank[a.fiscalPeriod] ?? 0);
+  });
+
+  const latest = rowsForDisplay[0];
+  const chartData = [...rowsForDisplay]
     .reverse()
     .map((item) => ({
-      year: `${item.fiscalYear}`,
+      periodLabel: item.period === 'QUARTERLY' ? `${item.fiscalYear} ${item.fiscalPeriod}` : `${item.fiscalYear}`,
       Revenue: item.revenue,
       'Net Income': item.netIncome,
       'Free Cash Flow': item.freeCashFlow,
@@ -132,11 +149,41 @@ export function FinancialStatementsPanel({
           </div>
         )}
 
+        {(annualRows.length > 0 || quarterlyRows.length > 0) && (
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setStatementPeriod('ANNUAL')}
+              className={`rounded-md border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] ${
+                statementPeriod === 'ANNUAL'
+                  ? 'border-sky-400/50 bg-sky-400/15 text-sky-300'
+                  : 'border-[var(--line)] text-[color:var(--muted)]'
+              }`}
+            >
+              Annual
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatementPeriod('QUARTERLY')}
+              className={`rounded-md border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] ${
+                statementPeriod === 'QUARTERLY'
+                  ? 'border-sky-400/50 bg-sky-400/15 text-sky-300'
+                  : 'border-[var(--line)] text-[color:var(--muted)]'
+              }`}
+            >
+              Quarterly
+            </button>
+            <p className="text-[11px] text-[color:var(--muted)]">
+              Showing {rowsForDisplay.length} rows
+            </p>
+          </div>
+        )}
+
         <div className="mb-5 h-[280px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 14, right: 14, left: 10, bottom: 30 }}>
               <CartesianGrid strokeDasharray="4 4" stroke="var(--line)" />
-              <XAxis dataKey="year" tick={{ fill: 'var(--muted)', fontSize: 11 }} />
+              <XAxis dataKey="periodLabel" tick={{ fill: 'var(--muted)', fontSize: 11 }} interval="preserveStartEnd" />
               <YAxis tick={{ fill: 'var(--muted)', fontSize: 11 }} />
               <Tooltip
                 formatter={(value) => formatMoney(Number(value))}
@@ -160,6 +207,7 @@ export function FinancialStatementsPanel({
             <thead>
               <tr className="border-b border-[var(--line)] bg-[color:var(--surface-soft)] text-left text-[color:var(--muted)]">
                 <th className="px-3 py-2 font-semibold uppercase tracking-[0.12em]">Year</th>
+                <th className="px-3 py-2 font-semibold uppercase tracking-[0.12em]">Period</th>
                 <th className="px-3 py-2 font-semibold uppercase tracking-[0.12em]">Revenue</th>
                 <th className="px-3 py-2 font-semibold uppercase tracking-[0.12em]">Operating Income</th>
                 <th className="px-3 py-2 font-semibold uppercase tracking-[0.12em]">Net Income</th>
@@ -170,9 +218,10 @@ export function FinancialStatementsPanel({
               </tr>
             </thead>
             <tbody>
-              {data.financials.map((row) => (
+              {rowsForDisplay.map((row) => (
                 <tr key={`${row.fiscalYear}-${row.fiscalPeriod}`} className="border-b border-[var(--line)] text-[color:var(--text)]">
                   <td className="numeric px-3 py-2">{row.fiscalYear}</td>
+                  <td className="px-3 py-2">{row.fiscalPeriod}</td>
                   <td className="numeric px-3 py-2">{formatMoney(row.revenue)}</td>
                   <td className="numeric px-3 py-2">{formatMoney(row.operatingIncome)}</td>
                   <td className="numeric px-3 py-2">{formatMoney(row.netIncome)}</td>

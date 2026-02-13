@@ -31,6 +31,63 @@ const mockAsset = {
     {
       id: 1,
       asset_id: 1,
+      period: 'QUARTERLY' as const,
+      fiscal_year: 2024,
+      fiscal_period: 'Q4',
+      revenue: 120000,
+      gross_profit: 51000,
+      operating_income: 35000,
+      net_income: 32000,
+      eps: 2.1,
+      free_cash_flow: 29000,
+      total_assets: 360000,
+      total_liabilities: 285000,
+      total_equity: 75000,
+      dividends_per_share: 0.24,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      id: 2,
+      asset_id: 1,
+      period: 'QUARTERLY' as const,
+      fiscal_year: 2024,
+      fiscal_period: 'Q3',
+      revenue: 114000,
+      gross_profit: 47000,
+      operating_income: 32000,
+      net_income: 29000,
+      eps: 1.9,
+      free_cash_flow: 25000,
+      total_assets: 358000,
+      total_liabilities: 283000,
+      total_equity: 75000,
+      dividends_per_share: 0.24,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      id: 3,
+      asset_id: 1,
+      period: 'QUARTERLY' as const,
+      fiscal_year: 2023,
+      fiscal_period: 'Q4',
+      revenue: 110000,
+      gross_profit: 45000,
+      operating_income: 30000,
+      net_income: 26000,
+      eps: 1.7,
+      free_cash_flow: 23000,
+      total_assets: 352000,
+      total_liabilities: 280000,
+      total_equity: 72000,
+      dividends_per_share: 0.23,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      id: 4,
+      asset_id: 1,
       period: 'ANNUAL' as const,
       fiscal_year: 2023,
       fiscal_period: 'FY',
@@ -91,11 +148,15 @@ describe('asset routes', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.symbol).toBe('AAPL');
-    expect(response.body.financials).toHaveLength(1);
+    expect(response.body.financials.length).toBeGreaterThanOrEqual(4);
     expect(response.body.financials[0]).toMatchObject({
-      fiscalYear: 2023,
-      netIncome: 97000,
+      fiscalYear: 2024,
+      fiscalPeriod: 'Q4',
+      netIncome: 32000,
     });
+    expect(response.body.metrics?.qoq?.revenueGrowthPct).toBeCloseTo(5.26, 2);
+    expect(response.body.scoreModel?.compositeScore).toBeGreaterThanOrEqual(0);
+    expect(response.body.scoreModel?.compositeScore).toBeLessThanOrEqual(100);
   });
 
   it('returns search results for asset query', async () => {
@@ -149,6 +210,18 @@ describe('asset routes', () => {
     });
     expect(response.body.news).toHaveLength(1);
     expect(response.body.insights.moat).toContain('competitive');
+    expect(response.body.metrics.qoq.latestLabel).toBe('2024 Q4');
+    expect(response.body.metrics.qoq.previousLabel).toBe('2024 Q3');
+    expect(response.body.metrics.yoy.previousLabel).toBe('2023 Q4');
+    expect(response.body.scoreModel.compositeScore).toBeGreaterThanOrEqual(0);
+    expect(response.body.scoreModel.compositeScore).toBeLessThanOrEqual(100);
+    expect(response.body.scoreModel.components).toMatchObject({
+      valuation: expect.any(Number),
+      growth: expect.any(Number),
+      profitability: expect.any(Number),
+      safety: expect.any(Number),
+      moat: expect.any(Number),
+    });
   });
 
   it('returns 404 when symbol does not exist', async () => {

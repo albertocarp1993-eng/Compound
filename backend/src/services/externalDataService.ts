@@ -541,9 +541,28 @@ const getFinancialStatements = async (symbol: string): Promise<ExternalFinancial
 
     const facts = (await response.json()) as CompanyFacts;
     const annual = buildFinancialRows(facts, 'ANNUAL').slice(0, 8);
+    const quarterly = buildFinancialRows(facts, 'QUARTERLY').slice(0, 12);
 
-    if (annual.length > 0) return annual;
-    return buildFinancialRows(facts, 'QUARTERLY').slice(0, 8);
+    const periodRank: Record<ExternalFinancialRow['period'], number> = {
+      QUARTERLY: 2,
+      ANNUAL: 1,
+    };
+
+    const fiscalPeriodRank: Record<string, number> = {
+      Q4: 4,
+      Q3: 3,
+      Q2: 2,
+      Q1: 1,
+      FY: 0,
+    };
+
+    return [...quarterly, ...annual]
+      .sort((a, b) => {
+        if (a.fiscalYear !== b.fiscalYear) return b.fiscalYear - a.fiscalYear;
+        if (a.period !== b.period) return periodRank[b.period] - periodRank[a.period];
+        return (fiscalPeriodRank[b.fiscalPeriod] ?? 0) - (fiscalPeriodRank[a.fiscalPeriod] ?? 0);
+      })
+      .slice(0, 20);
   } catch {
     return [];
   }

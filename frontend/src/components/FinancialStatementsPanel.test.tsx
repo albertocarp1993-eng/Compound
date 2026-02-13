@@ -25,6 +25,12 @@ describe('FinancialStatementsPanel', () => {
             verdict: 'BUY',
             snowballScore: 100,
           },
+          metrics: {
+            qoq: null,
+            yoy: null,
+            annualTrend: null,
+          },
+          scoreModel: null,
           financials: [
             {
               fiscalYear: 2023,

@@ -1,5 +1,10 @@
 import { HealthVerdict } from './analytics';
-import { AssetFinancialRow, AssetFundamentalsPayload } from './financials';
+import {
+  AssetFinancialRow,
+  AssetFundamentalsPayload,
+  AssetMetricsPayload,
+  AssetScoreModelPayload,
+} from './financials';
 import { MoatRating } from './scoring';
 
 export type AssetSearchResult = {
@@ -41,6 +46,8 @@ export type AssetComprehensiveResponse = {
     source: 'stooq' | 'local';
     asOf: string;
   };
+  metrics: AssetMetricsPayload;
+  scoreModel: AssetScoreModelPayload | null;
   insights: {
     moat: string;
     valuation: string;

@@ -8,7 +8,7 @@ import {
   ExternalQuote,
   externalDataService,
 } from '../services/externalDataService';
-import { calculateAssetScoreDetails } from '../services/scoringService';
+import { calculateAssetScoreDetails, calculateCompositeQualityScore } from '../services/scoringService';
 
 export type AssetDbClient = Pick<typeof prisma, 'asset'>;
 
@@ -61,10 +61,97 @@ type FundamentalsPayload = {
   snowballScore: number;
 };
 
+type PeriodComparisonMetrics = {
+  latestLabel: string;
+  previousLabel: string;
+  revenueGrowthPct: number | null;
+  netIncomeGrowthPct: number | null;
+  epsGrowthPct: number | null;
+  freeCashFlowGrowthPct: number | null;
+  grossMarginDeltaPct: number | null;
+  operatingMarginDeltaPct: number | null;
+  netMarginDeltaPct: number | null;
+  freeCashFlowMarginDeltaPct: number | null;
+};
+
+type AnnualTrendMetrics = {
+  sampleYears: number;
+  revenueCagrPct: number | null;
+  epsCagrPct: number | null;
+  freeCashFlowCagrPct: number | null;
+};
+
+type AssetMetricsPayload = {
+  qoq: PeriodComparisonMetrics | null;
+  yoy: PeriodComparisonMetrics | null;
+  annualTrend: AnnualTrendMetrics | null;
+};
+
+type ScoreModelPayload = {
+  compositeScore: number;
+  label: 'ELITE' | 'STRONG' | 'WATCH' | 'RISK';
+  components: {
+    valuation: number;
+    growth: number;
+    profitability: number;
+    safety: number;
+    moat: number;
+  };
+  weights: {
+    valuation: number;
+    growth: number;
+    profitability: number;
+    safety: number;
+    moat: number;
+  };
+  breakdown: Array<{
+    component: 'valuation' | 'growth' | 'profitability' | 'safety' | 'moat';
+    score: number;
+    weight: number;
+    weightedContribution: number;
+    reason: string;
+  }>;
+};
+
+const periodPriority: Record<FinancialRowPayload['period'], number> = {
+  QUARTERLY: 2,
+  ANNUAL: 1,
+};
+
+const fiscalPeriodPriority: Record<string, number> = {
+  Q4: 4,
+  Q3: 3,
+  Q2: 2,
+  Q1: 1,
+  FY: 0,
+};
+
 const toPercentage = (numerator: number, denominator: number): number => {
   if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator === 0) return 0;
   return Number(((numerator / denominator) * 100).toFixed(2));
 };
+
+const toRoundedOrNull = (value: number): number | null => {
+  if (!Number.isFinite(value)) return null;
+  return Number(value.toFixed(2));
+};
+
+const growthPct = (current: number, previous: number): number | null => {
+  if (!Number.isFinite(current) || !Number.isFinite(previous) || previous === 0) return null;
+  return toRoundedOrNull(((current - previous) / Math.abs(previous)) * 100);
+};
+
+const deltaPct = (current: number, previous: number): number | null => {
+  if (!Number.isFinite(current) || !Number.isFinite(previous)) return null;
+  return toRoundedOrNull(current - previous);
+};
+
+const sortFinancialRows = (rows: FinancialRowPayload[]): FinancialRowPayload[] =>
+  [...rows].sort((a, b) => {
+    if (a.fiscalYear !== b.fiscalYear) return b.fiscalYear - a.fiscalYear;
+    if (a.period !== b.period) return periodPriority[b.period] - periodPriority[a.period];
+    return (fiscalPeriodPriority[b.fiscalPeriod] ?? 0) - (fiscalPeriodPriority[a.fiscalPeriod] ?? 0);
+  });
 
 const toFinancialPayloadRow = (
   row: Omit<FinancialRowPayload, 'grossMarginPct' | 'operatingMarginPct' | 'netMarginPct' | 'debtToAssetsPct'>,
@@ -77,41 +164,45 @@ const toFinancialPayloadRow = (
 });
 
 const fromLocalFinancialRows = (asset: AssetWithFinancials): FinancialRowPayload[] =>
-  asset.financials.map((item) =>
-    toFinancialPayloadRow({
-      fiscalYear: item.fiscal_year,
-      fiscalPeriod: item.fiscal_period,
-      period: item.period,
-      revenue: item.revenue,
-      grossProfit: item.gross_profit,
-      operatingIncome: item.operating_income,
-      netIncome: item.net_income,
-      eps: item.eps,
-      freeCashFlow: item.free_cash_flow,
-      totalAssets: item.total_assets,
-      totalLiabilities: item.total_liabilities,
-      totalEquity: item.total_equity,
-      dividendsPerShare: item.dividends_per_share,
-    }),
+  sortFinancialRows(
+    asset.financials.map((item) =>
+      toFinancialPayloadRow({
+        fiscalYear: item.fiscal_year,
+        fiscalPeriod: item.fiscal_period,
+        period: item.period,
+        revenue: item.revenue,
+        grossProfit: item.gross_profit,
+        operatingIncome: item.operating_income,
+        netIncome: item.net_income,
+        eps: item.eps,
+        freeCashFlow: item.free_cash_flow,
+        totalAssets: item.total_assets,
+        totalLiabilities: item.total_liabilities,
+        totalEquity: item.total_equity,
+        dividendsPerShare: item.dividends_per_share,
+      }),
+    ),
   );
 
 const fromExternalFinancialRows = (rows: ExternalFinancialRow[]): FinancialRowPayload[] =>
-  rows.map((item) =>
-    toFinancialPayloadRow({
-      fiscalYear: item.fiscalYear,
-      fiscalPeriod: item.fiscalPeriod,
-      period: item.period,
-      revenue: item.revenue,
-      grossProfit: item.grossProfit,
-      operatingIncome: item.operatingIncome,
-      netIncome: item.netIncome,
-      eps: item.eps,
-      freeCashFlow: item.freeCashFlow,
-      totalAssets: item.totalAssets,
-      totalLiabilities: item.totalLiabilities,
-      totalEquity: item.totalEquity,
-      dividendsPerShare: item.dividendsPerShare,
-    }),
+  sortFinancialRows(
+    rows.map((item) =>
+      toFinancialPayloadRow({
+        fiscalYear: item.fiscalYear,
+        fiscalPeriod: item.fiscalPeriod,
+        period: item.period,
+        revenue: item.revenue,
+        grossProfit: item.grossProfit,
+        operatingIncome: item.operatingIncome,
+        netIncome: item.netIncome,
+        eps: item.eps,
+        freeCashFlow: item.freeCashFlow,
+        totalAssets: item.totalAssets,
+        totalLiabilities: item.totalLiabilities,
+        totalEquity: item.totalEquity,
+        dividendsPerShare: item.dividendsPerShare,
+      }),
+    ),
   );
 
 const fromLocalFundamentals = (asset: AssetWithFinancials): FundamentalsPayload | null =>
@@ -127,7 +218,7 @@ const fromLocalFundamentals = (asset: AssetWithFinancials): FundamentalsPayload 
         historicalVolatility: asset.fundamentals.historical_volatility,
         healthRating: asset.fundamentals.health_rating,
         verdict: asset.fundamentals.verdict,
-        snowballScore: asset.fundamentals.health_rating,
+        snowballScore: asset.fundamentals.calculated_score,
       }
     : null;
 
@@ -228,6 +319,136 @@ const deriveFundamentals = (
     healthRating: details.healthRating,
     verdict: details.verdict,
     snowballScore: details.score,
+  };
+};
+
+const buildPeriodComparison = (
+  latest: FinancialRowPayload,
+  previous: FinancialRowPayload,
+): PeriodComparisonMetrics => {
+  const latestFcfMargin = toPercentage(latest.freeCashFlow, latest.revenue);
+  const previousFcfMargin = toPercentage(previous.freeCashFlow, previous.revenue);
+
+  return {
+    latestLabel: `${latest.fiscalYear} ${latest.fiscalPeriod}`,
+    previousLabel: `${previous.fiscalYear} ${previous.fiscalPeriod}`,
+    revenueGrowthPct: growthPct(latest.revenue, previous.revenue),
+    netIncomeGrowthPct: growthPct(latest.netIncome, previous.netIncome),
+    epsGrowthPct: growthPct(latest.eps, previous.eps),
+    freeCashFlowGrowthPct: growthPct(latest.freeCashFlow, previous.freeCashFlow),
+    grossMarginDeltaPct: deltaPct(latest.grossMarginPct, previous.grossMarginPct),
+    operatingMarginDeltaPct: deltaPct(latest.operatingMarginPct, previous.operatingMarginPct),
+    netMarginDeltaPct: deltaPct(latest.netMarginPct, previous.netMarginPct),
+    freeCashFlowMarginDeltaPct: deltaPct(latestFcfMargin, previousFcfMargin),
+  };
+};
+
+const cagrPct = (latestValue: number, baseValue: number, years: number): number | null => {
+  if (
+    !Number.isFinite(latestValue) ||
+    !Number.isFinite(baseValue) ||
+    baseValue <= 0 ||
+    latestValue <= 0 ||
+    years <= 0
+  ) {
+    return null;
+  }
+
+  return toRoundedOrNull((Math.pow(latestValue / baseValue, 1 / years) - 1) * 100);
+};
+
+const buildAnnualTrend = (rows: FinancialRowPayload[]): AnnualTrendMetrics | null => {
+  const annualRows = rows
+    .filter((row) => row.period === 'ANNUAL')
+    .sort((a, b) => a.fiscalYear - b.fiscalYear);
+
+  if (annualRows.length < 2) return null;
+
+  const latest = annualRows[annualRows.length - 1];
+  const base = annualRows[Math.max(0, annualRows.length - 4)];
+  const sampleYears = latest.fiscalYear - base.fiscalYear;
+  if (sampleYears <= 0) return null;
+
+  return {
+    sampleYears,
+    revenueCagrPct: cagrPct(latest.revenue, base.revenue, sampleYears),
+    epsCagrPct: cagrPct(latest.eps, base.eps, sampleYears),
+    freeCashFlowCagrPct: cagrPct(latest.freeCashFlow, base.freeCashFlow, sampleYears),
+  };
+};
+
+const buildAssetMetrics = (rows: FinancialRowPayload[]): AssetMetricsPayload => {
+  const quarterlyRows = rows
+    .filter((row) => row.period === 'QUARTERLY')
+    .sort((a, b) => {
+      if (a.fiscalYear !== b.fiscalYear) return b.fiscalYear - a.fiscalYear;
+      return (fiscalPeriodPriority[b.fiscalPeriod] ?? 0) - (fiscalPeriodPriority[a.fiscalPeriod] ?? 0);
+    });
+
+  const latestQuarter = quarterlyRows[0];
+  const previousQuarter = quarterlyRows[1];
+  const yoyQuarter = latestQuarter
+    ? quarterlyRows.find(
+        (row) =>
+          row.fiscalYear === latestQuarter.fiscalYear - 1 &&
+          row.fiscalPeriod === latestQuarter.fiscalPeriod,
+      )
+    : undefined;
+
+  return {
+    qoq:
+      latestQuarter && previousQuarter
+        ? buildPeriodComparison(latestQuarter, previousQuarter)
+        : null,
+    yoy:
+      latestQuarter && yoyQuarter
+        ? buildPeriodComparison(latestQuarter, yoyQuarter)
+        : null,
+    annualTrend: buildAnnualTrend(rows),
+  };
+};
+
+const buildScoreModel = (
+  fundamentals: FundamentalsPayload | null,
+  financials: FinancialRowPayload[],
+  metrics: AssetMetricsPayload,
+): ScoreModelPayload | null => {
+  if (!fundamentals) return null;
+
+  const latestFinancial = financials[0];
+  const freeCashFlowMarginPct = latestFinancial
+    ? toPercentage(latestFinancial.freeCashFlow, latestFinancial.revenue)
+    : null;
+
+  const result = calculateCompositeQualityScore({
+    peRatio: fundamentals.peRatio,
+    roe: fundamentals.roe,
+    debtToEquity: fundamentals.debtToEquity,
+    payoutRatio: fundamentals.payoutRatio,
+    dividendSafetyScore: fundamentals.dividendSafetyScore,
+    moatRating: fundamentals.moatRating,
+    historicalVolatility: fundamentals.historicalVolatility,
+    dividendGrowthStreak: fundamentals.dividendGrowthStreak,
+    qoqRevenueGrowthPct: metrics.qoq?.revenueGrowthPct ?? null,
+    qoqNetIncomeGrowthPct: metrics.qoq?.netIncomeGrowthPct ?? null,
+    qoqEpsGrowthPct: metrics.qoq?.epsGrowthPct ?? null,
+    qoqFreeCashFlowGrowthPct: metrics.qoq?.freeCashFlowGrowthPct ?? null,
+    yoyRevenueGrowthPct: metrics.yoy?.revenueGrowthPct ?? null,
+    yoyNetIncomeGrowthPct: metrics.yoy?.netIncomeGrowthPct ?? null,
+    yoyEpsGrowthPct: metrics.yoy?.epsGrowthPct ?? null,
+    yoyFreeCashFlowGrowthPct: metrics.yoy?.freeCashFlowGrowthPct ?? null,
+    grossMarginPct: latestFinancial?.grossMarginPct ?? null,
+    operatingMarginPct: latestFinancial?.operatingMarginPct ?? null,
+    netMarginPct: latestFinancial?.netMarginPct ?? null,
+    freeCashFlowMarginPct,
+  });
+
+  return {
+    compositeScore: result.compositeScore,
+    label: result.label,
+    components: result.components,
+    weights: result.weights,
+    breakdown: result.breakdown,
   };
 };
 
@@ -361,12 +582,16 @@ export const createAssetRouter = (
       const fundamentals = asset
         ? fromLocalFundamentals(asset) ?? deriveFundamentals(financials, currentPrice)
         : deriveFundamentals(financials, currentPrice);
+      const metrics = buildAssetMetrics(financials);
+      const scoreModel = buildScoreModel(fundamentals, financials, metrics);
 
       return res.json({
         symbol,
         name: asset?.name ?? profile?.name ?? symbol,
         currentPrice,
         fundamentals,
+        metrics,
+        scoreModel,
         financials,
       });
     } catch (error) {
@@ -413,6 +638,8 @@ export const createAssetRouter = (
       const fundamentals = asset
         ? fromLocalFundamentals(asset) ?? deriveFundamentals(financials, currentPrice)
         : deriveFundamentals(financials, currentPrice);
+      const metrics = buildAssetMetrics(financials);
+      const scoreModel = buildScoreModel(fundamentals, financials, metrics);
 
       const resolvedQuote = quote
         ? {
@@ -437,6 +664,8 @@ export const createAssetRouter = (
         currentPrice,
         fundamentals,
         quote: resolvedQuote,
+        metrics,
+        scoreModel,
         insights: {
           moat: classifyMoat(fundamentals?.moatRating ?? null),
           valuation: classifyValuation(fundamentals?.peRatio ?? null),
