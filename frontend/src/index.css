@@ -8,15 +8,30 @@
   --bg-0: #070b14;
   --bg-1: #0b1220;
   --bg-2: #111827;
-  --line: rgba(148, 163, 184, 0.18);
+  --line: rgba(148, 163, 184, 0.2);
   --text: #f1f5f9;
   --muted: #94a3b8;
+  --surface: rgba(11, 18, 32, 0.74);
+  --surface-soft: rgba(17, 24, 39, 0.78);
+  --surface-strong: rgba(30, 41, 59, 0.74);
   --accent-emerald: #22c55e;
   --accent-blue: #38bdf8;
   --accent-gold: #f59e0b;
   font-family: 'Space Grotesk', 'Avenir Next', 'Segoe UI', sans-serif;
   color: var(--text);
   background-color: var(--bg-0);
+}
+
+[data-theme='light'] {
+  --bg-0: #f6f8fc;
+  --bg-1: #eef3fb;
+  --bg-2: #e6edf9;
+  --line: rgba(100, 116, 139, 0.26);
+  --text: #0f172a;
+  --muted: #475569;
+  --surface: rgba(255, 255, 255, 0.84);
+  --surface-soft: rgba(248, 250, 252, 0.95);
+  --surface-strong: rgba(226, 232, 240, 0.75);
 }
 
 body {
@@ -35,6 +50,11 @@ body {
 
 * {
   box-sizing: border-box;
+}
+
+.theme-surface {
+  background: var(--surface);
+  border-color: var(--line);
 }
 
 .numeric {

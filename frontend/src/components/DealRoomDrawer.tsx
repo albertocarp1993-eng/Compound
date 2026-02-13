@@ -30,10 +30,10 @@ export function DealRoomDrawer({ point, open, onOpenChange, onOpenStock }: DealR
                 <Badge variant={point.verdict === 'BUY' ? 'success' : point.verdict === 'HOLD' ? 'warning' : 'danger'}>
                   {point.verdict}
                 </Badge>
-                <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">Deal Room</span>
+                <span className="text-xs uppercase tracking-[0.2em] text-[color:var(--muted)]">Deal Room</span>
               </div>
               <SheetTitle className="text-2xl">
-                {point.name} <span className="numeric text-zinc-400">({point.symbol})</span>
+                {point.name} <span className="numeric text-[color:var(--muted)]">({point.symbol})</span>
               </SheetTitle>
               <SheetDescription>
                 Drill-down for valuation, quality, moat context, and position exposure.
@@ -41,8 +41,8 @@ export function DealRoomDrawer({ point, open, onOpenChange, onOpenStock }: DealR
             </SheetHeader>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
-                <p className="mb-1 flex items-center gap-1 text-[11px] uppercase tracking-[0.14em] text-zinc-500">
+              <div className="rounded-lg border border-[var(--line)] bg-[color:var(--surface-soft)] p-3">
+                <p className="mb-1 flex items-center gap-1 text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted)]">
                   <Gauge className="h-3.5 w-3.5" /> Quality Score
                 </p>
                 <p className="numeric text-2xl font-semibold" style={{ color: getScoreColor(point.qualityScore) }}>
@@ -50,31 +50,31 @@ export function DealRoomDrawer({ point, open, onOpenChange, onOpenStock }: DealR
                 </p>
               </div>
 
-              <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
-                <p className="mb-1 flex items-center gap-1 text-[11px] uppercase tracking-[0.14em] text-zinc-500">
+              <div className="rounded-lg border border-[var(--line)] bg-[color:var(--surface-soft)] p-3">
+                <p className="mb-1 flex items-center gap-1 text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted)]">
                   <BadgeDollarSign className="h-3.5 w-3.5" /> Position Value
                 </p>
-                <p className="numeric text-2xl font-semibold text-zinc-200">{formatCurrency(point.positionValue)}</p>
+                <p className="numeric text-2xl font-semibold text-[color:var(--text)]">{formatCurrency(point.positionValue)}</p>
               </div>
 
-              <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
-                <p className="mb-1 flex items-center gap-1 text-[11px] uppercase tracking-[0.14em] text-zinc-500">
+              <div className="rounded-lg border border-[var(--line)] bg-[color:var(--surface-soft)] p-3">
+                <p className="mb-1 flex items-center gap-1 text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted)]">
                   <TrendingDown className="h-3.5 w-3.5" /> Valuation (P/E)
                 </p>
-                <p className="numeric text-2xl font-semibold text-zinc-200">{point.peRatio.toFixed(2)}</p>
+                <p className="numeric text-2xl font-semibold text-[color:var(--text)]">{point.peRatio.toFixed(2)}</p>
               </div>
 
-              <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
-                <p className="mb-1 flex items-center gap-1 text-[11px] uppercase tracking-[0.14em] text-zinc-500">
+              <div className="rounded-lg border border-[var(--line)] bg-[color:var(--surface-soft)] p-3">
+                <p className="mb-1 flex items-center gap-1 text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted)]">
                   <Shield className="h-3.5 w-3.5" /> Moat / Weight
                 </p>
-                <p className="numeric text-2xl font-semibold text-zinc-200">{point.moatRating}</p>
-                <p className="numeric text-xs text-zinc-400">{point.portfolioWeight.toFixed(2)}% weight</p>
+                <p className="numeric text-2xl font-semibold text-[color:var(--text)]">{point.moatRating}</p>
+                <p className="numeric text-xs text-[color:var(--muted)]">{point.portfolioWeight.toFixed(2)}% weight</p>
               </div>
             </div>
 
-            <div className="mt-4 rounded-lg border border-zinc-800 bg-zinc-900/60 p-3 text-sm text-zinc-300">
-              <p className="mb-1 flex items-center gap-1 text-[11px] uppercase tracking-[0.14em] text-zinc-500">
+            <div className="mt-4 rounded-lg border border-[var(--line)] bg-[color:var(--surface-soft)] p-3 text-sm text-[color:var(--text)]">
+              <p className="mb-1 flex items-center gap-1 text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted)]">
                 <TrendingUp className="h-3.5 w-3.5" /> Position Interpretation
               </p>
               <p>
@@ -84,7 +84,7 @@ export function DealRoomDrawer({ point, open, onOpenChange, onOpenStock }: DealR
                     ? 'Balanced quality profile requiring active monitoring.'
                     : 'Low-quality profile; consider risk control and position sizing.'}
               </p>
-              <p className="mt-2 text-xs text-zinc-400">
+              <p className="mt-2 text-xs text-[color:var(--muted)]">
                 Target quadrant advantage: {formatSignedPoints(point.qualityScore - point.peRatio)} quality-minus-valuation spread.
               </p>
             </div>

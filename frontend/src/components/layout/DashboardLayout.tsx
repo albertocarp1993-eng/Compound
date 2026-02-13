@@ -6,11 +6,14 @@ import {
   ChevronRight,
   CircleDollarSign,
   Compass,
+  Moon,
   ShieldCheck,
   Snowflake,
+  Sun,
 } from 'lucide-react';
 import { createPortfolio, getPortfolios } from '../../api/client';
 import useDashboardData from '../../hooks/useDashboardData';
+import useTheme from '../../hooks/useTheme';
 import { PortfolioSummary } from '../../types/portfolio';
 import AssetSearchBar from '../AssetSearchBar';
 import { Badge } from '../ui/badge';
@@ -43,22 +46,22 @@ type DashboardLayoutContextShape = {
 
 const sidebarLinks = [
   {
-    section: 'command-center',
+    path: '/command-center',
     label: 'Command Center',
     icon: Compass,
   },
   {
-    section: 'snowball-projection',
+    path: '/snowball-projection',
     label: 'Snowball Projection',
     icon: Snowflake,
   },
   {
-    section: 'dividends',
+    path: '/dividends',
     label: 'Dividends',
     icon: CircleDollarSign,
   },
   {
-    section: 'quality-audit',
+    path: '/quality-audit',
     label: 'Quality Audit',
     icon: ShieldCheck,
   },
@@ -71,6 +74,7 @@ export function useDashboardLayoutContext(): DashboardLayoutContextShape {
 export function DashboardLayout(): JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
+  const { theme, toggleTheme } = useTheme();
 
   const [collapsed, setCollapsed] = useState(false);
   const [portfolios, setPortfolios] = useState<PortfolioSummary[]>([]);
@@ -153,23 +157,20 @@ export function DashboardLayout(): JSX.Element {
     dashboardData,
   };
 
-  const activeSidebarSection = useMemo(() => {
-    const params = new URLSearchParams(location.search);
-    return params.get('section');
-  }, [location.search]);
+  const activeSidebarPath = useMemo(() => location.pathname, [location.pathname]);
 
   return (
     <div className="flex min-h-screen w-full">
       <aside
-        className={`border-r border-zinc-800/80 bg-zinc-950/80 px-3 py-4 transition-all duration-300 ${collapsed ? 'w-16' : 'w-72'}`}
+        className={`border-r border-[var(--line)] bg-[color:var(--surface-soft)] px-3 py-4 transition-all duration-300 ${collapsed ? 'w-16' : 'w-72'}`}
       >
         <div className="mb-5 flex items-center justify-between">
           {collapsed ? (
-            <p className="text-sm font-semibold text-zinc-100">SE</p>
+            <p className="text-sm font-semibold text-[color:var(--text)]">SE</p>
           ) : (
             <div>
-              <p className="text-[11px] uppercase tracking-[0.22em] text-zinc-500">Snowball Elite</p>
-              <p className="text-base font-semibold text-zinc-100">Portfolio CRM</p>
+              <p className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--muted)]">Snowball Elite</p>
+              <p className="text-base font-semibold text-[color:var(--text)]">Portfolio CRM</p>
             </div>
           )}
 
@@ -181,24 +182,12 @@ export function DashboardLayout(): JSX.Element {
         <nav className="space-y-1">
           {sidebarLinks.map((link) => (
             <Link
-              key={link.section}
-              to={{
-                pathname: '/',
-                search: `?section=${encodeURIComponent(link.section)}`,
-              }}
-              onClick={(event) => {
-                if (location.pathname === '/' && activeSidebarSection === link.section) {
-                  event.preventDefault();
-                  const target = document.getElementById(link.section);
-                  if (target) {
-                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }
-                }
-              }}
+              key={link.path}
+              to={link.path}
               className={`flex items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors ${
-                activeSidebarSection === link.section && location.pathname === '/'
-                  ? 'bg-zinc-800 text-zinc-100'
-                  : 'text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100'
+                activeSidebarPath === link.path
+                  ? 'bg-[color:var(--surface-strong)] text-[color:var(--text)]'
+                  : 'text-[color:var(--muted)] hover:bg-[color:var(--surface-strong)] hover:text-[color:var(--text)]'
               }`}
             >
               <link.icon className="h-4 w-4 shrink-0" />
@@ -208,10 +197,10 @@ export function DashboardLayout(): JSX.Element {
         </nav>
 
         {!collapsed && (
-          <div className="mt-6 space-y-3 rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
-            <p className="text-[11px] uppercase tracking-[0.14em] text-zinc-500">Portfolio</p>
+          <div className="mt-6 space-y-3 rounded-lg border border-[var(--line)] bg-[color:var(--surface)] p-3">
+            <p className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted)]">Portfolio</p>
             <select
-              className="h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-2 text-sm text-zinc-200"
+              className="h-9 w-full rounded-md border border-[var(--line)] bg-[color:var(--surface-soft)] px-2 text-sm text-[color:var(--text)]"
               value={selectedPortfolioId ?? ''}
               onChange={(event) => setSelectedPortfolioId(Number(event.target.value))}
               disabled={portfolioLoading || portfolios.length === 0}
@@ -239,17 +228,28 @@ export function DashboardLayout(): JSX.Element {
       </aside>
 
       <main className="min-w-0 flex-1 p-4 md:p-5">
-        <header className="mb-4 rounded-xl border border-zinc-800 bg-zinc-950/60 p-4">
+        <header className="mb-4 rounded-xl border border-[var(--line)] bg-[color:var(--surface)] p-4">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-[11px] uppercase tracking-[0.2em] text-zinc-500">Command Deck</p>
-              <h1 className="text-2xl font-semibold text-zinc-100">Snowball Elite</h1>
+              <p className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--muted)]">Command Deck</p>
+              <h1 className="text-2xl font-semibold text-[color:var(--text)]">Snowball Elite</h1>
             </div>
 
             <div className="flex items-center gap-2">
               <Badge variant="info">CRM Mode</Badge>
-              <Button variant="secondary" size="sm" onClick={() => navigate('/')}>
+              <Button variant="secondary" size="sm" onClick={() => navigate('/command-center')}>
                 <BarChart3 className="mr-1 h-4 w-4" /> Dashboard
+              </Button>
+              <Button variant="ghost" size="sm" onClick={toggleTheme}>
+                {theme === 'light' ? (
+                  <>
+                    <Moon className="mr-1 h-4 w-4" /> Midnight
+                  </>
+                ) : (
+                  <>
+                    <Sun className="mr-1 h-4 w-4" /> Light
+                  </>
+                )}
               </Button>
             </div>
           </div>
@@ -268,14 +268,14 @@ export function DashboardLayout(): JSX.Element {
               </>
             ) : (
               <>
-                <div className="rounded-lg border border-zinc-800 bg-zinc-900/70 p-3">
-                  <p className="text-[11px] uppercase tracking-[0.15em] text-zinc-500">Net Worth</p>
-                  <p className="numeric mt-1 text-xl font-semibold text-zinc-100">
+                <div className="rounded-lg border border-[var(--line)] bg-[color:var(--surface-soft)] p-3">
+                  <p className="text-[11px] uppercase tracking-[0.15em] text-[color:var(--muted)]">Net Worth</p>
+                  <p className="numeric mt-1 text-xl font-semibold text-[color:var(--text)]">
                     {formatCurrency(dashboardData.kpis?.netWorth ?? 0)}
                   </p>
                 </div>
-                <div className="rounded-lg border border-zinc-800 bg-zinc-900/70 p-3">
-                  <p className="text-[11px] uppercase tracking-[0.15em] text-zinc-500">Day Change</p>
+                <div className="rounded-lg border border-[var(--line)] bg-[color:var(--surface-soft)] p-3">
+                  <p className="text-[11px] uppercase tracking-[0.15em] text-[color:var(--muted)]">Day Change</p>
                   <p
                     className="numeric mt-1 text-xl font-semibold"
                     style={{ color: (dashboardData.kpis?.dayChangePct ?? 0) >= 0 ? '#22c55e' : '#ef4444' }}
@@ -283,14 +283,14 @@ export function DashboardLayout(): JSX.Element {
                     {(dashboardData.kpis?.dayChangePct ?? 0).toFixed(2)}%
                   </p>
                 </div>
-                <div className="rounded-lg border border-zinc-800 bg-zinc-900/70 p-3">
-                  <p className="text-[11px] uppercase tracking-[0.15em] text-zinc-500">YTD Dividends</p>
+                <div className="rounded-lg border border-[var(--line)] bg-[color:var(--surface-soft)] p-3">
+                  <p className="text-[11px] uppercase tracking-[0.15em] text-[color:var(--muted)]">YTD Dividends</p>
                   <p className="numeric mt-1 text-xl font-semibold text-emerald-300">
                     {formatCurrency(dashboardData.kpis?.ytdDividends ?? 0)}
                   </p>
                 </div>
-                <div className="rounded-lg border border-zinc-800 bg-zinc-900/70 p-3">
-                  <p className="text-[11px] uppercase tracking-[0.15em] text-zinc-500">Snowball Factor</p>
+                <div className="rounded-lg border border-[var(--line)] bg-[color:var(--surface-soft)] p-3">
+                  <p className="text-[11px] uppercase tracking-[0.15em] text-[color:var(--muted)]">Snowball Factor</p>
                   <p className="numeric mt-1 text-xl font-semibold text-sky-300">
                     {(dashboardData.kpis?.snowballFactor ?? 0).toFixed(2)}x
                   </p>

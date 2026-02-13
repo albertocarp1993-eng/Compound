@@ -1,5 +1,6 @@
 import {
   PolarAngleAxis,
+  PolarGrid,
   RadialBar,
   RadialBarChart,
   ResponsiveContainer,
@@ -60,7 +61,8 @@ export function ScoreGauge({
               cy="90%"
             >
               <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
-              <RadialBar background={{ fill: '#1f2937' }} dataKey="value" cornerRadius={10} />
+              <PolarGrid gridType="circle" radialLines={false} stroke="var(--line)" polarRadius={[78, 90, 102]} />
+              <RadialBar background={{ fill: 'var(--surface-strong)' }} dataKey="value" cornerRadius={10} />
             </RadialBarChart>
           </ResponsiveContainer>
 
@@ -68,7 +70,12 @@ export function ScoreGauge({
             <span className="numeric text-5xl font-bold" style={{ color }}>
               {Math.round(boundedScore)}
             </span>
-            <span className="text-xs uppercase tracking-[0.22em] text-zinc-500">Health Score</span>
+            <span className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">Health Score</span>
+          </div>
+          <div className="pointer-events-none absolute bottom-3 left-0 right-0 flex items-center justify-between px-9 text-[10px] uppercase tracking-[0.14em] text-[color:var(--muted)]">
+            <span>0</span>
+            <span>50</span>
+            <span>100</span>
           </div>
         </div>
       </CardContent>

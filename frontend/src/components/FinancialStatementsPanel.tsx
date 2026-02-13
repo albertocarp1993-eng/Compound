@@ -90,11 +90,11 @@ export function FinancialStatementsPanel({
       <CardHeader>
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Company Financials</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-[color:var(--muted)]">Company Financials</p>
             <CardTitle className="text-2xl">
               {data.name} ({data.symbol})
             </CardTitle>
-            <p className="text-sm text-zinc-400">Statement values reported in USD</p>
+            <p className="text-sm text-[color:var(--muted)]">Statement values reported in USD</p>
           </div>
 
           {data.fundamentals && (
@@ -113,21 +113,21 @@ export function FinancialStatementsPanel({
       <CardContent>
         {latest && (
           <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-4">
-            <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 px-4 py-3">
-              <p className="text-[11px] uppercase tracking-[0.12em] text-zinc-500">Latest Revenue</p>
-              <p className="numeric text-lg font-semibold text-zinc-100">{formatMoney(latest.revenue)}</p>
+            <div className="rounded-lg border border-[var(--line)] bg-[color:var(--surface-soft)] px-4 py-3">
+              <p className="text-[11px] uppercase tracking-[0.12em] text-[color:var(--muted)]">Latest Revenue</p>
+              <p className="numeric text-lg font-semibold text-[color:var(--text)]">{formatMoney(latest.revenue)}</p>
             </div>
-            <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 px-4 py-3">
-              <p className="text-[11px] uppercase tracking-[0.12em] text-zinc-500">Net Income</p>
-              <p className="numeric text-lg font-semibold text-zinc-100">{formatMoney(latest.netIncome)}</p>
+            <div className="rounded-lg border border-[var(--line)] bg-[color:var(--surface-soft)] px-4 py-3">
+              <p className="text-[11px] uppercase tracking-[0.12em] text-[color:var(--muted)]">Net Income</p>
+              <p className="numeric text-lg font-semibold text-[color:var(--text)]">{formatMoney(latest.netIncome)}</p>
             </div>
-            <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 px-4 py-3">
-              <p className="text-[11px] uppercase tracking-[0.12em] text-zinc-500">Free Cash Flow</p>
-              <p className="numeric text-lg font-semibold text-zinc-100">{formatMoney(latest.freeCashFlow)}</p>
+            <div className="rounded-lg border border-[var(--line)] bg-[color:var(--surface-soft)] px-4 py-3">
+              <p className="text-[11px] uppercase tracking-[0.12em] text-[color:var(--muted)]">Free Cash Flow</p>
+              <p className="numeric text-lg font-semibold text-[color:var(--text)]">{formatMoney(latest.freeCashFlow)}</p>
             </div>
-            <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 px-4 py-3">
-              <p className="text-[11px] uppercase tracking-[0.12em] text-zinc-500">Net Margin</p>
-              <p className="numeric text-lg font-semibold text-zinc-100">{formatPct(latest.netMarginPct)}</p>
+            <div className="rounded-lg border border-[var(--line)] bg-[color:var(--surface-soft)] px-4 py-3">
+              <p className="text-[11px] uppercase tracking-[0.12em] text-[color:var(--muted)]">Net Margin</p>
+              <p className="numeric text-lg font-semibold text-[color:var(--text)]">{formatPct(latest.netMarginPct)}</p>
             </div>
           </div>
         )}
@@ -135,12 +135,17 @@ export function FinancialStatementsPanel({
         <div className="mb-5 h-[280px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 8, right: 14, left: 10, bottom: 8 }}>
-              <CartesianGrid strokeDasharray="4 4" stroke="#1f2937" />
-              <XAxis dataKey="year" tick={{ fill: '#94a3b8', fontSize: 11 }} />
-              <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} />
+              <CartesianGrid strokeDasharray="4 4" stroke="var(--line)" />
+              <XAxis dataKey="year" tick={{ fill: 'var(--muted)', fontSize: 11 }} />
+              <YAxis tick={{ fill: 'var(--muted)', fontSize: 11 }} />
               <Tooltip
                 formatter={(value) => formatMoney(Number(value))}
-                contentStyle={{ borderRadius: 10, borderColor: '#334155', backgroundColor: '#090f1d', color: '#e2e8f0' }}
+                contentStyle={{
+                  borderRadius: 10,
+                  borderColor: 'var(--line)',
+                  backgroundColor: 'var(--surface)',
+                  color: 'var(--text)',
+                }}
               />
               <Legend />
               <Line type="monotone" dataKey="Revenue" stroke="#38bdf8" strokeWidth={2} dot />
@@ -153,7 +158,7 @@ export function FinancialStatementsPanel({
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-xs">
             <thead>
-              <tr className="border-b border-zinc-800 bg-zinc-900/60 text-left text-zinc-400">
+              <tr className="border-b border-[var(--line)] bg-[color:var(--surface-soft)] text-left text-[color:var(--muted)]">
                 <th className="px-3 py-2 font-semibold uppercase tracking-[0.12em]">Year</th>
                 <th className="px-3 py-2 font-semibold uppercase tracking-[0.12em]">Revenue</th>
                 <th className="px-3 py-2 font-semibold uppercase tracking-[0.12em]">Operating Income</th>
@@ -166,7 +171,7 @@ export function FinancialStatementsPanel({
             </thead>
             <tbody>
               {data.financials.map((row) => (
-                <tr key={`${row.fiscalYear}-${row.fiscalPeriod}`} className="border-b border-zinc-900 text-zinc-200">
+                <tr key={`${row.fiscalYear}-${row.fiscalPeriod}`} className="border-b border-[var(--line)] text-[color:var(--text)]">
                   <td className="numeric px-3 py-2">{row.fiscalYear}</td>
                   <td className="numeric px-3 py-2">{formatMoney(row.revenue)}</td>
                   <td className="numeric px-3 py-2">{formatMoney(row.operatingIncome)}</td>

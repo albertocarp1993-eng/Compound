@@ -54,6 +54,10 @@ export function MoatDistribution({ data, height = 260, loading = false }: MoatDi
       weight: totalCapital > 0 ? (totals[key] / totalCapital) * 100 : 0,
     }));
   }, [data]);
+  const totalCapital = useMemo(
+    () => slices.reduce((acc, slice) => acc + slice.capital, 0),
+    [slices],
+  );
 
   if (loading) {
     return (
@@ -76,37 +80,44 @@ export function MoatDistribution({ data, height = 260, loading = false }: MoatDi
         <CardDescription>How much capital sits behind durable businesses.</CardDescription>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={height}>
-          <PieChart>
-            <Pie
-              data={slices}
-              dataKey="capital"
-              nameKey="moatRating"
-              cx="50%"
-              cy="50%"
-              outerRadius={90}
-              innerRadius={42}
-              label={({ moatRating, weight }) => `${labelByMoat[moatRating as MoatRating]} ${weight.toFixed(0)}%`}
-            >
-              {slices.map((slice) => (
-                <Cell key={slice.moatRating} fill={moatColors[slice.moatRating]} />
-              ))}
-            </Pie>
-            <Tooltip
-              contentStyle={{
-                borderRadius: 10,
-                borderColor: '#334155',
-                backgroundColor: '#090f1d',
-                color: '#e2e8f0',
-              }}
-              formatter={(value, _, item) => {
-                const moatRating = item.payload.moatRating as MoatRating;
-                return [formatCurrency(Number(value)), labelByMoat[moatRating]];
-              }}
-            />
-            <Legend formatter={(value) => labelByMoat[value as MoatRating]} />
-          </PieChart>
-        </ResponsiveContainer>
+        <div className="relative">
+          <ResponsiveContainer width="100%" height={height}>
+            <PieChart>
+              <Pie
+                data={slices}
+                dataKey="capital"
+                nameKey="moatRating"
+                cx="50%"
+                cy="50%"
+                outerRadius={90}
+                innerRadius={42}
+                label={({ moatRating, weight }) => `${labelByMoat[moatRating as MoatRating]} ${weight.toFixed(0)}%`}
+              >
+                {slices.map((slice) => (
+                  <Cell key={slice.moatRating} fill={moatColors[slice.moatRating]} />
+                ))}
+              </Pie>
+              <Tooltip
+                contentStyle={{
+                  borderRadius: 10,
+                  borderColor: 'var(--line)',
+                  backgroundColor: 'var(--surface)',
+                  color: 'var(--text)',
+                }}
+                formatter={(value, _, item) => {
+                  const moatRating = item.payload.moatRating as MoatRating;
+                  return [formatCurrency(Number(value)), labelByMoat[moatRating]];
+                }}
+              />
+              <Legend formatter={(value) => labelByMoat[value as MoatRating]} />
+            </PieChart>
+          </ResponsiveContainer>
+
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[color:var(--muted)]">Protected Capital</p>
+            <p className="numeric text-base font-semibold text-[color:var(--text)]">{formatCurrency(totalCapital)}</p>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

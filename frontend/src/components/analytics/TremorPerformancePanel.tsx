@@ -30,7 +30,7 @@ export function TremorPerformancePanel({ points, loading = false }: TremorPerfor
   }
 
   return (
-    <div className="mb-4 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950/70 p-4">
+    <div className="mb-4 overflow-hidden rounded-xl border border-[var(--line)] bg-[color:var(--surface)] p-4">
       <TremorCard decoration="top" decorationColor="emerald" className="border-none bg-transparent p-0 shadow-none">
         <Text>Snowball Trend (Tremor)</Text>
         <Metric>{formatCurrency(latest?.totalValue ?? 0)}</Metric>

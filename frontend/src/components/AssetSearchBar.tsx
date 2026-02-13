@@ -57,11 +57,11 @@ export function AssetSearchBar({ onSelectSymbol }: AssetSearchBarProps): JSX.Ele
 
   return (
     <div className="relative">
-      <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+      <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
         Search Company (symbol or name)
       </label>
       <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--muted)]" />
         <Input
           type="text"
           value={query}
@@ -79,13 +79,13 @@ export function AssetSearchBar({ onSelectSymbol }: AssetSearchBarProps): JSX.Ele
       </div>
 
       {hasDropdown && (
-        <div className="absolute z-40 mt-2 w-full overflow-hidden rounded-md border border-zinc-700 bg-zinc-950 shadow-2xl">
-          {loading && <p className="px-4 py-3 text-sm text-zinc-400">Searching...</p>}
+        <div className="absolute z-40 mt-2 w-full overflow-hidden rounded-md border border-[var(--line)] bg-[color:var(--surface)] shadow-2xl">
+          {loading && <p className="px-4 py-3 text-sm text-[color:var(--muted)]">Searching...</p>}
 
           {error && <p className="px-4 py-3 text-sm text-rose-400">{error}</p>}
 
           {!loading && !error && results.length === 0 && (
-            <p className="px-4 py-3 text-sm text-zinc-400">No assets found.</p>
+            <p className="px-4 py-3 text-sm text-[color:var(--muted)]">No assets found.</p>
           )}
 
           {!loading &&
@@ -99,13 +99,13 @@ export function AssetSearchBar({ onSelectSymbol }: AssetSearchBarProps): JSX.Ele
                   setQuery('');
                   setResults([]);
                 }}
-                className="flex w-full items-center justify-between border-b border-zinc-800 px-4 py-3 text-left hover:bg-zinc-900"
+                className="flex w-full items-center justify-between border-b border-[var(--line)] px-4 py-3 text-left hover:bg-[color:var(--surface-soft)]"
               >
                 <span>
-                  <span className="numeric font-semibold text-zinc-100">{result.symbol}</span>
-                  <span className="ml-2 text-sm text-zinc-400">{result.name}</span>
+                  <span className="numeric font-semibold text-[color:var(--text)]">{result.symbol}</span>
+                  <span className="ml-2 text-sm text-[color:var(--muted)]">{result.name}</span>
                 </span>
-                <span className="ml-2 flex items-center gap-3 text-xs text-zinc-500">
+                <span className="ml-2 flex items-center gap-3 text-xs text-[color:var(--muted)]">
                   <span className="numeric">{formatCurrency(result.currentPrice)}</span>
                   <span className="uppercase tracking-wide">{result.source}</span>
                   {result.snowballScore !== null && (
@@ -113,7 +113,7 @@ export function AssetSearchBar({ onSelectSymbol }: AssetSearchBarProps): JSX.Ele
                       className="rounded-full px-2 py-1 font-semibold"
                       style={{
                         color: getScoreColor(result.snowballScore),
-                        backgroundColor: '#111827',
+                        backgroundColor: 'var(--surface-strong)',
                       }}
                     >
                       Q {result.snowballScore}

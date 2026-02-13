@@ -14,7 +14,7 @@ const SheetOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <Dialog.Overlay
     ref={ref}
-    className={cn('fixed inset-0 z-50 bg-zinc-950/70 backdrop-blur-sm', className)}
+    className={cn('fixed inset-0 z-50 bg-black/45 backdrop-blur-sm', className)}
     {...props}
   />
 ));
@@ -29,12 +29,12 @@ const SheetContent = React.forwardRef<
     <Dialog.Content
       ref={ref}
       className={cn(
-        'fixed inset-y-0 right-0 z-50 h-full w-full max-w-xl border-l border-zinc-800 bg-zinc-950 p-6 text-zinc-100 shadow-2xl',
+        'fixed inset-y-0 right-0 z-50 h-full w-full max-w-xl border-l border-[var(--line)] bg-[color:var(--surface)] p-6 text-[color:var(--text)] shadow-2xl',
         className,
       )}
       {...props}
     >
-      <SheetClose className="absolute right-4 top-4 rounded-md text-zinc-400 hover:text-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70">
+      <SheetClose className="absolute right-4 top-4 rounded-md text-[color:var(--muted)] hover:text-[color:var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70">
         <X className="h-4 w-4" />
         <span className="sr-only">Close</span>
       </SheetClose>
@@ -60,7 +60,7 @@ const SheetDescription = React.forwardRef<
   React.ElementRef<typeof Dialog.Description>,
   React.ComponentPropsWithoutRef<typeof Dialog.Description>
 >(({ className, ...props }, ref) => (
-  <Dialog.Description ref={ref} className={cn('text-sm text-zinc-400', className)} {...props} />
+  <Dialog.Description ref={ref} className={cn('text-sm text-[color:var(--muted)]', className)} {...props} />
 ));
 SheetDescription.displayName = Dialog.Description.displayName;
 

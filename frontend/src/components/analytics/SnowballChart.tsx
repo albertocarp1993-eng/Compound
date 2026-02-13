@@ -1,5 +1,6 @@
 import {
   Area,
+  Brush,
   CartesianGrid,
   ComposedChart,
   Line,
@@ -63,25 +64,25 @@ export function SnowballChart({ data, loading = false }: SnowballChartProps): JS
                   <stop offset="100%" stopColor="#34d399" stopOpacity={0.2} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="4 4" stroke="#1f2937" />
+              <CartesianGrid strokeDasharray="4 4" stroke="var(--line)" />
               <XAxis
                 dataKey="date"
                 tickFormatter={formatDate}
                 minTickGap={45}
-                tick={{ fill: '#94a3b8', fontSize: 11 }}
+                tick={{ fill: 'var(--muted)', fontSize: 11 }}
               />
               <YAxis
                 tickFormatter={(value) => `$${Math.round(value / 1000)}k`}
-                tick={{ fill: '#94a3b8', fontSize: 11 }}
+                tick={{ fill: 'var(--muted)', fontSize: 11 }}
               />
               <Tooltip
                 formatter={(value: number, key: string) => [formatCurrency(value), key]}
                 labelFormatter={(label) => formatDate(String(label))}
                 contentStyle={{
-                  backgroundColor: '#090f1d',
-                  borderColor: '#334155',
+                  backgroundColor: 'var(--surface)',
+                  borderColor: 'var(--line)',
                   borderRadius: 10,
-                  color: '#e2e8f0',
+                  color: 'var(--text)',
                 }}
               />
               <Area
@@ -110,6 +111,13 @@ export function SnowballChart({ data, loading = false }: SnowballChartProps): JS
                 strokeWidth={2}
                 strokeDasharray="5 5"
                 dot={false}
+              />
+              <Brush
+                dataKey="date"
+                height={22}
+                travellerWidth={10}
+                stroke="#60a5fa"
+                tickFormatter={formatDate}
               />
             </ComposedChart>
           </ResponsiveContainer>
