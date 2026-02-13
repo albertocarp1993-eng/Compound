@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, Outlet, useNavigate, useOutletContext } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import {
   BarChart3,
   ChevronLeft,
@@ -43,22 +43,22 @@ type DashboardLayoutContextShape = {
 
 const sidebarLinks = [
   {
-    href: '#command-center',
+    section: 'command-center',
     label: 'Command Center',
     icon: Compass,
   },
   {
-    href: '#snowball-projection',
+    section: 'snowball-projection',
     label: 'Snowball Projection',
     icon: Snowflake,
   },
   {
-    href: '#dividends',
+    section: 'dividends',
     label: 'Dividends',
     icon: CircleDollarSign,
   },
   {
-    href: '#quality-audit',
+    section: 'quality-audit',
     label: 'Quality Audit',
     icon: ShieldCheck,
   },
@@ -70,6 +70,7 @@ export function useDashboardLayoutContext(): DashboardLayoutContextShape {
 
 export function DashboardLayout(): JSX.Element {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [collapsed, setCollapsed] = useState(false);
   const [portfolios, setPortfolios] = useState<PortfolioSummary[]>([]);
@@ -152,6 +153,11 @@ export function DashboardLayout(): JSX.Element {
     dashboardData,
   };
 
+  const activeSidebarSection = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get('section');
+  }, [location.search]);
+
   return (
     <div className="flex min-h-screen w-full">
       <aside
@@ -174,14 +180,30 @@ export function DashboardLayout(): JSX.Element {
 
         <nav className="space-y-1">
           {sidebarLinks.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              className="flex items-center gap-2 rounded-md px-2 py-2 text-sm text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
+            <Link
+              key={link.section}
+              to={{
+                pathname: '/',
+                search: `?section=${encodeURIComponent(link.section)}`,
+              }}
+              onClick={(event) => {
+                if (location.pathname === '/' && activeSidebarSection === link.section) {
+                  event.preventDefault();
+                  const target = document.getElementById(link.section);
+                  if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }
+                }
+              }}
+              className={`flex items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors ${
+                activeSidebarSection === link.section && location.pathname === '/'
+                  ? 'bg-zinc-800 text-zinc-100'
+                  : 'text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100'
+              }`}
             >
               <link.icon className="h-4 w-4 shrink-0" />
               {!collapsed && <span>{link.label}</span>}
-            </a>
+            </Link>
           ))}
         </nav>
 
@@ -229,7 +251,6 @@ export function DashboardLayout(): JSX.Element {
               <Button variant="secondary" size="sm" onClick={() => navigate('/')}>
                 <BarChart3 className="mr-1 h-4 w-4" /> Dashboard
               </Button>
-              <Link to="/stocks/AAPL" className="hidden" />
             </div>
           </div>
 

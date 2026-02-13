@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -59,6 +59,7 @@ function SortableWidget({ id, className, children }: SortableWidgetProps): JSX.E
 
 export function DashboardPage(): JSX.Element {
   const navigate = useNavigate();
+  const location = useLocation();
   const {
     selectedPortfolio,
     selectedPortfolioId,
@@ -92,6 +93,23 @@ export function DashboardPage(): JSX.Element {
       candidate.calculatedScore > best.calculatedScore ? candidate : best,
     );
   }, [dashboardData.holdings]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const section = params.get('section');
+
+    if (!section) return;
+    if (dashboardData.loading || portfolioLoading) return;
+
+    const timeout = window.setTimeout(() => {
+      const target = document.getElementById(section);
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 60);
+
+    return () => window.clearTimeout(timeout);
+  }, [location.search, dashboardData.loading, portfolioLoading]);
 
   const renderWidget = (id: WidgetId): JSX.Element => {
     if (id === 'gauge') {
