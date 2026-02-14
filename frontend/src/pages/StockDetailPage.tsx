@@ -439,6 +439,7 @@ export function StockDetailPage(): JSX.Element {
             fundamentals: data.fundamentals,
             metrics: safeMetrics,
             scoreModel: safeScoreModel,
+            financialMetricTable: data.financialMetricTable ?? [],
             financials: data.financials,
           }}
           loading={false}

@@ -157,6 +157,13 @@ describe('asset routes', () => {
     expect(response.body.metrics?.qoq?.revenueGrowthPct).toBeCloseTo(5.26, 2);
     expect(response.body.scoreModel?.compositeScore).toBeGreaterThanOrEqual(0);
     expect(response.body.scoreModel?.compositeScore).toBeLessThanOrEqual(100);
+    expect(response.body.financialMetricTable.length).toBeGreaterThanOrEqual(30);
+    expect(response.body.financialMetricTable.find((row: { key: string }) => row.key === 'eps')).toBeTruthy();
+    expect(
+      response.body.financialMetricTable.find(
+        (row: { key: string }) => row.key === 'stock_based_comp',
+      ),
+    ).toBeTruthy();
   });
 
   it('returns search results for asset query', async () => {
@@ -222,6 +229,12 @@ describe('asset routes', () => {
       safety: expect.any(Number),
       moat: expect.any(Number),
     });
+    expect(response.body.financialMetricTable.length).toBeGreaterThanOrEqual(30);
+    expect(
+      response.body.financialMetricTable.find(
+        (row: { key: string }) => row.key === 'free_cash_flow',
+      ),
+    ).toBeTruthy();
   });
 
   it('returns 404 when symbol does not exist', async () => {

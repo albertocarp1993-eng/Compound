@@ -2,6 +2,7 @@ import { HealthVerdict } from './analytics';
 import {
   AssetFinancialRow,
   AssetFundamentalsPayload,
+  FinancialMetricRow,
   AssetMetricsPayload,
   AssetScoreModelPayload,
 } from './financials';
@@ -54,6 +55,7 @@ export type AssetComprehensiveResponse = {
     profitability: string;
     balanceSheet: string;
   };
+  financialMetricTable?: FinancialMetricRow[];
   financials: AssetFinancialRow[];
   news: AssetNewsItem[];
   dataSources: {

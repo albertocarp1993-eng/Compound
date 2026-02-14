@@ -10,15 +10,37 @@ export type AssetFinancialRow = {
   operatingIncome: number;
   netIncome: number;
   eps: number;
+  operatingCashFlow: number;
+  capitalExpenditures: number;
   freeCashFlow: number;
+  stockBasedCompensation: number;
+  dilutedSharesOutstanding: number;
+  researchAndDevelopmentExpense: number;
+  sellingGeneralAdministrativeExpense: number;
   totalAssets: number;
+  currentAssets: number;
+  cashAndEquivalents: number;
   totalLiabilities: number;
+  currentLiabilities: number;
+  longTermDebt: number;
   totalEquity: number;
+  interestExpense: number;
   dividendsPerShare: number;
   grossMarginPct: number;
   operatingMarginPct: number;
   netMarginPct: number;
   debtToAssetsPct: number;
+  freeCashFlowMarginPct: number;
+  operatingCashFlowMarginPct: number;
+  debtToEquityRatio: number;
+  currentRatio: number;
+  returnOnAssetsPct: number;
+  returnOnEquityPct: number;
+  capexToRevenuePct: number;
+  sbcToRevenuePct: number;
+  assetTurnoverRatio: number;
+  fcfConversionPct: number;
+  interestCoverageRatio: number;
 };
 
 export type AssetFundamentalsPayload = {
@@ -42,10 +64,15 @@ export type PeriodComparisonMetrics = {
   netIncomeGrowthPct: number | null;
   epsGrowthPct: number | null;
   freeCashFlowGrowthPct: number | null;
+  operatingCashFlowGrowthPct: number | null;
+  stockBasedCompensationGrowthPct: number | null;
   grossMarginDeltaPct: number | null;
   operatingMarginDeltaPct: number | null;
   netMarginDeltaPct: number | null;
   freeCashFlowMarginDeltaPct: number | null;
+  debtToEquityDelta: number | null;
+  currentRatioDelta: number | null;
+  interestCoverageDelta: number | null;
 };
 
 export type AnnualTrendMetrics = {
@@ -59,6 +86,26 @@ export type AssetMetricsPayload = {
   qoq: PeriodComparisonMetrics | null;
   yoy: PeriodComparisonMetrics | null;
   annualTrend: AnnualTrendMetrics | null;
+};
+
+export type FinancialMetricRow = {
+  key: string;
+  category:
+    | 'Income Statement'
+    | 'Cash Flow'
+    | 'Balance Sheet'
+    | 'Per Share'
+    | 'Margins'
+    | 'Returns'
+    | 'Leverage'
+    | 'Efficiency';
+  metric: string;
+  unit: 'USD' | 'PERCENT' | 'RATIO' | 'PER_SHARE' | 'SHARES';
+  latestValue: number | null;
+  priorQuarterValue: number | null;
+  sameQuarterLastYearValue: number | null;
+  qoqChangePct: number | null;
+  yoyChangePct: number | null;
 };
 
 export type AssetScoreModelPayload = {
@@ -94,5 +141,6 @@ export type AssetFinancialsResponse = {
   fundamentals: AssetFundamentalsPayload | null;
   metrics?: AssetMetricsPayload;
   scoreModel?: AssetScoreModelPayload | null;
+  financialMetricTable?: FinancialMetricRow[];
   financials: AssetFinancialRow[];
 };

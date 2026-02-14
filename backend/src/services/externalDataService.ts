@@ -34,10 +34,21 @@ export type ExternalFinancialRow = {
   operatingIncome: number;
   netIncome: number;
   eps: number;
+  operatingCashFlow: number;
+  capitalExpenditures: number;
   freeCashFlow: number;
+  stockBasedCompensation: number;
+  dilutedSharesOutstanding: number;
+  researchAndDevelopmentExpense: number;
+  sellingGeneralAdministrativeExpense: number;
   totalAssets: number;
+  currentAssets: number;
+  cashAndEquivalents: number;
   totalLiabilities: number;
+  currentLiabilities: number;
+  longTermDebt: number;
   totalEquity: number;
+  interestExpense: number;
   dividendsPerShare: number;
 };
 
@@ -385,13 +396,60 @@ const buildFinancialRows = (
     period,
   );
 
+  const stockBasedCompensation = normalizeEntries(
+    findBestEntries(usGaap, ['ShareBasedCompensation'], ['USD']),
+    period,
+  );
+
+  const dilutedSharesOutstanding = normalizeEntries(
+    findBestEntries(
+      usGaap,
+      [
+        'WeightedAverageNumberOfDilutedSharesOutstanding',
+        'WeightedAverageNumberOfShareOutstandingBasicAndDiluted',
+      ],
+      ['shares'],
+    ),
+    period,
+  );
+
+  const researchAndDevelopmentExpense = normalizeEntries(
+    findBestEntries(usGaap, ['ResearchAndDevelopmentExpense'], ['USD']),
+    period,
+  );
+
+  const sellingGeneralAdministrativeExpense = normalizeEntries(
+    findBestEntries(usGaap, ['SellingGeneralAndAdministrativeExpense'], ['USD']),
+    period,
+  );
+
   const totalAssets = normalizeEntries(
     findBestEntries(usGaap, ['Assets'], ['USD']),
     period,
   );
 
+  const currentAssets = normalizeEntries(
+    findBestEntries(usGaap, ['AssetsCurrent'], ['USD']),
+    period,
+  );
+
+  const cashAndEquivalents = normalizeEntries(
+    findBestEntries(usGaap, ['CashAndCashEquivalentsAtCarryingValue'], ['USD']),
+    period,
+  );
+
   const totalLiabilities = normalizeEntries(
     findBestEntries(usGaap, ['Liabilities'], ['USD']),
+    period,
+  );
+
+  const currentLiabilities = normalizeEntries(
+    findBestEntries(usGaap, ['LiabilitiesCurrent'], ['USD']),
+    period,
+  );
+
+  const longTermDebt = normalizeEntries(
+    findBestEntries(usGaap, ['LongTermDebtNoncurrent', 'LongTermDebt'], ['USD']),
     period,
   );
 
@@ -404,6 +462,11 @@ const buildFinancialRows = (
       ],
       ['USD'],
     ),
+    period,
+  );
+
+  const interestExpense = normalizeEntries(
+    findBestEntries(usGaap, ['InterestExpense'], ['USD']),
     period,
   );
 
@@ -436,10 +499,21 @@ const buildFinancialRows = (
       operatingIncome: 0,
       netIncome: 0,
       eps: 0,
+      operatingCashFlow: 0,
+      capitalExpenditures: 0,
       freeCashFlow: 0,
+      stockBasedCompensation: 0,
+      dilutedSharesOutstanding: 0,
+      researchAndDevelopmentExpense: 0,
+      sellingGeneralAdministrativeExpense: 0,
       totalAssets: 0,
+      currentAssets: 0,
+      cashAndEquivalents: 0,
       totalLiabilities: 0,
+      currentLiabilities: 0,
+      longTermDebt: 0,
       totalEquity: 0,
+      interestExpense: 0,
       dividendsPerShare: 0,
       cfo: null,
       capex: null,
@@ -455,9 +529,20 @@ const buildFinancialRows = (
     | 'operatingIncome'
     | 'netIncome'
     | 'eps'
+    | 'operatingCashFlow'
+    | 'capitalExpenditures'
     | 'totalAssets'
+    | 'currentAssets'
+    | 'cashAndEquivalents'
     | 'totalLiabilities'
+    | 'currentLiabilities'
+    | 'longTermDebt'
     | 'totalEquity'
+    | 'interestExpense'
+    | 'stockBasedCompensation'
+    | 'dilutedSharesOutstanding'
+    | 'researchAndDevelopmentExpense'
+    | 'sellingGeneralAdministrativeExpense'
     | 'dividendsPerShare'
     | 'cfo'
     | 'capex';
@@ -482,10 +567,21 @@ const buildFinancialRows = (
   applySeries(operatingIncome, 'operatingIncome');
   applySeries(netIncome, 'netIncome');
   applySeries(eps, 'eps');
+  applySeries(stockBasedCompensation, 'stockBasedCompensation');
+  applySeries(dilutedSharesOutstanding, 'dilutedSharesOutstanding');
+  applySeries(researchAndDevelopmentExpense, 'researchAndDevelopmentExpense');
+  applySeries(sellingGeneralAdministrativeExpense, 'sellingGeneralAdministrativeExpense');
   applySeries(totalAssets, 'totalAssets');
+  applySeries(currentAssets, 'currentAssets');
+  applySeries(cashAndEquivalents, 'cashAndEquivalents');
   applySeries(totalLiabilities, 'totalLiabilities');
+  applySeries(currentLiabilities, 'currentLiabilities');
+  applySeries(longTermDebt, 'longTermDebt');
   applySeries(totalEquity, 'totalEquity');
+  applySeries(interestExpense, 'interestExpense');
   applySeries(dividendsPerShare, 'dividendsPerShare');
+  applySeries(cfo, 'operatingCashFlow');
+  applySeries(capex, 'capitalExpenditures');
   applySeries(cfo, 'cfo');
   applySeries(capex, 'capex');
 
@@ -499,8 +595,12 @@ const buildFinancialRows = (
 
   return [...rows.values()]
     .map((row) => {
+      row.capitalExpenditures = Math.abs(row.capitalExpenditures);
+
       if (row.cfo !== null) {
-        const capexValue = row.capex !== null ? Math.abs(row.capex) : 0;
+        const capexValue = row.capex !== null ? Math.abs(row.capex) : row.capitalExpenditures;
+        row.operatingCashFlow = row.cfo;
+        row.capitalExpenditures = capexValue;
         row.freeCashFlow = row.cfo - capexValue;
       }
 
@@ -513,10 +613,21 @@ const buildFinancialRows = (
         operatingIncome: row.operatingIncome,
         netIncome: row.netIncome,
         eps: row.eps,
+        operatingCashFlow: row.operatingCashFlow,
+        capitalExpenditures: row.capitalExpenditures,
         freeCashFlow: row.freeCashFlow,
+        stockBasedCompensation: row.stockBasedCompensation,
+        dilutedSharesOutstanding: row.dilutedSharesOutstanding,
+        researchAndDevelopmentExpense: row.researchAndDevelopmentExpense,
+        sellingGeneralAdministrativeExpense: row.sellingGeneralAdministrativeExpense,
         totalAssets: row.totalAssets,
+        currentAssets: row.currentAssets,
+        cashAndEquivalents: row.cashAndEquivalents,
         totalLiabilities: row.totalLiabilities,
+        currentLiabilities: row.currentLiabilities,
+        longTermDebt: row.longTermDebt,
         totalEquity: row.totalEquity,
+        interestExpense: row.interestExpense,
         dividendsPerShare: row.dividendsPerShare,
       };
     })

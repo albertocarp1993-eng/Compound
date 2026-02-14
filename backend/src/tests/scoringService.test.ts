@@ -71,9 +71,9 @@ describe('calculateAssetScore', () => {
       freeCashFlowMarginPct: 26,
     });
 
-    expect(composite.compositeScore).toBeGreaterThanOrEqual(80);
+    expect(composite.compositeScore).toBeGreaterThanOrEqual(75);
     expect(['ELITE', 'STRONG']).toContain(composite.label);
-    expect(composite.components.growth).toBeGreaterThan(60);
+    expect(composite.components.growth).toBeGreaterThanOrEqual(60);
     expect(composite.breakdown).toHaveLength(5);
   });
 

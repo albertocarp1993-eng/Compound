@@ -30,12 +30,43 @@ const formatMoney = (value: number): string =>
 
 const formatPct = (value: number): string => `${value.toFixed(1)}%`;
 
+const formatRatio = (value: number): string => value.toFixed(2);
+
+const formatShares = (value: number): string =>
+  new Intl.NumberFormat('en-US', {
+    notation: 'compact',
+    maximumFractionDigits: 2,
+  }).format(value);
+
+const formatMetricValue = (
+  value: number | null,
+  unit: 'USD' | 'PERCENT' | 'RATIO' | 'PER_SHARE' | 'SHARES',
+): string => {
+  if (value === null || !Number.isFinite(value)) return 'N/A';
+  if (unit === 'USD') return formatMoney(value);
+  if (unit === 'PERCENT') return `${value.toFixed(2)}%`;
+  if (unit === 'RATIO') return formatRatio(value);
+  if (unit === 'PER_SHARE') return `$${value.toFixed(2)}`;
+  return formatShares(value);
+};
+
+const formatDeltaPct = (value: number | null): string => {
+  if (value === null || !Number.isFinite(value)) return 'N/A';
+  const sign = value > 0 ? '+' : '';
+  return `${sign}${value.toFixed(2)}%`;
+};
+
+const toneClass = (value: number | null): string => {
+  if (value === null || !Number.isFinite(value)) return 'text-[color:var(--muted)]';
+  return value >= 0 ? 'text-emerald-400' : 'text-rose-400';
+};
+
 export function FinancialStatementsPanel({
   data,
   loading,
   error,
 }: FinancialStatementsPanelProps): JSX.Element {
-  const [statementPeriod, setStatementPeriod] = useState<'ANNUAL' | 'QUARTERLY'>('ANNUAL');
+  const [statementPeriod, setStatementPeriod] = useState<'ANNUAL' | 'QUARTERLY'>('QUARTERLY');
 
   if (loading) {
     return (
@@ -81,7 +112,9 @@ export function FinancialStatementsPanel({
   const annualRows = data.financials.filter((row) => row.period === 'ANNUAL');
   const quarterlyRows = data.financials.filter((row) => row.period === 'QUARTERLY');
   const baseRows = statementPeriod === 'QUARTERLY'
-    ? quarterlyRows
+    ? quarterlyRows.length > 0
+      ? quarterlyRows
+      : annualRows
     : annualRows.length > 0
       ? annualRows
       : data.financials;
@@ -101,6 +134,10 @@ export function FinancialStatementsPanel({
       'Net Income': item.netIncome,
       'Free Cash Flow': item.freeCashFlow,
     }));
+  const comprehensiveMetrics = data.financialMetricTable ?? [];
+  const latestQuarterLabel = data.metrics?.qoq?.latestLabel ?? 'Latest';
+  const priorQuarterLabel = data.metrics?.qoq?.previousLabel ?? 'Prior Quarter';
+  const sameQuarterLastYearLabel = data.metrics?.yoy?.previousLabel ?? 'Same Quarter LY';
 
   return (
     <Card>
@@ -233,6 +270,55 @@ export function FinancialStatementsPanel({
               ))}
             </tbody>
           </table>
+        </div>
+
+        <div className="mt-5">
+          <p className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted)]">
+            Comprehensive Metrics Matrix
+          </p>
+          <p className="mt-1 text-[11px] text-[color:var(--muted)]">
+            30+ metrics from SEC filings with QoQ and YoY deltas.
+          </p>
+
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-[var(--line)] bg-[color:var(--surface-soft)] text-left text-[color:var(--muted)]">
+                  <th className="px-3 py-2 font-semibold uppercase tracking-[0.12em]">Category</th>
+                  <th className="px-3 py-2 font-semibold uppercase tracking-[0.12em]">Metric</th>
+                  <th className="px-3 py-2 font-semibold uppercase tracking-[0.12em]">{latestQuarterLabel}</th>
+                  <th className="px-3 py-2 font-semibold uppercase tracking-[0.12em]">{priorQuarterLabel}</th>
+                  <th className="px-3 py-2 font-semibold uppercase tracking-[0.12em]">QoQ</th>
+                  <th className="px-3 py-2 font-semibold uppercase tracking-[0.12em]">{sameQuarterLastYearLabel}</th>
+                  <th className="px-3 py-2 font-semibold uppercase tracking-[0.12em]">YoY</th>
+                </tr>
+              </thead>
+              <tbody>
+                {comprehensiveMetrics.map((metricRow) => (
+                  <tr key={metricRow.key} className="border-b border-[var(--line)] text-[color:var(--text)]">
+                    <td className="px-3 py-2 text-[color:var(--muted)]">{metricRow.category}</td>
+                    <td className="px-3 py-2">{metricRow.metric}</td>
+                    <td className="numeric px-3 py-2">{formatMetricValue(metricRow.latestValue, metricRow.unit)}</td>
+                    <td className="numeric px-3 py-2">{formatMetricValue(metricRow.priorQuarterValue, metricRow.unit)}</td>
+                    <td className={`numeric px-3 py-2 ${toneClass(metricRow.qoqChangePct)}`}>
+                      {formatDeltaPct(metricRow.qoqChangePct)}
+                    </td>
+                    <td className="numeric px-3 py-2">{formatMetricValue(metricRow.sameQuarterLastYearValue, metricRow.unit)}</td>
+                    <td className={`numeric px-3 py-2 ${toneClass(metricRow.yoyChangePct)}`}>
+                      {formatDeltaPct(metricRow.yoyChangePct)}
+                    </td>
+                  </tr>
+                ))}
+                {comprehensiveMetrics.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="px-3 py-3 text-sm text-[color:var(--muted)]">
+                      Comprehensive metrics are not available for this symbol yet.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </CardContent>
     </Card>

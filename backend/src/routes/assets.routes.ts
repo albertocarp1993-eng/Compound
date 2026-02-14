@@ -36,15 +36,37 @@ type FinancialRowPayload = {
   operatingIncome: number;
   netIncome: number;
   eps: number;
+  operatingCashFlow: number;
+  capitalExpenditures: number;
   freeCashFlow: number;
+  stockBasedCompensation: number;
+  dilutedSharesOutstanding: number;
+  researchAndDevelopmentExpense: number;
+  sellingGeneralAdministrativeExpense: number;
   totalAssets: number;
+  currentAssets: number;
+  cashAndEquivalents: number;
   totalLiabilities: number;
+  currentLiabilities: number;
+  longTermDebt: number;
   totalEquity: number;
+  interestExpense: number;
   dividendsPerShare: number;
   grossMarginPct: number;
   operatingMarginPct: number;
   netMarginPct: number;
   debtToAssetsPct: number;
+  freeCashFlowMarginPct: number;
+  operatingCashFlowMarginPct: number;
+  debtToEquityRatio: number;
+  currentRatio: number;
+  returnOnAssetsPct: number;
+  returnOnEquityPct: number;
+  capexToRevenuePct: number;
+  sbcToRevenuePct: number;
+  assetTurnoverRatio: number;
+  fcfConversionPct: number;
+  interestCoverageRatio: number;
 };
 
 type FundamentalsPayload = {
@@ -68,10 +90,15 @@ type PeriodComparisonMetrics = {
   netIncomeGrowthPct: number | null;
   epsGrowthPct: number | null;
   freeCashFlowGrowthPct: number | null;
+  operatingCashFlowGrowthPct: number | null;
+  stockBasedCompensationGrowthPct: number | null;
   grossMarginDeltaPct: number | null;
   operatingMarginDeltaPct: number | null;
   netMarginDeltaPct: number | null;
   freeCashFlowMarginDeltaPct: number | null;
+  debtToEquityDelta: number | null;
+  currentRatioDelta: number | null;
+  interestCoverageDelta: number | null;
 };
 
 type AnnualTrendMetrics = {
@@ -85,6 +112,30 @@ type AssetMetricsPayload = {
   qoq: PeriodComparisonMetrics | null;
   yoy: PeriodComparisonMetrics | null;
   annualTrend: AnnualTrendMetrics | null;
+};
+
+type FinancialMetricCategory =
+  | 'Income Statement'
+  | 'Cash Flow'
+  | 'Balance Sheet'
+  | 'Per Share'
+  | 'Margins'
+  | 'Returns'
+  | 'Leverage'
+  | 'Efficiency';
+
+type FinancialMetricUnit = 'USD' | 'PERCENT' | 'RATIO' | 'PER_SHARE' | 'SHARES';
+
+type FinancialMetricRow = {
+  key: string;
+  category: FinancialMetricCategory;
+  metric: string;
+  unit: FinancialMetricUnit;
+  latestValue: number | null;
+  priorQuarterValue: number | null;
+  sameQuarterLastYearValue: number | null;
+  qoqChangePct: number | null;
+  yoyChangePct: number | null;
 };
 
 type ScoreModelPayload = {
@@ -131,6 +182,11 @@ const toPercentage = (numerator: number, denominator: number): number => {
   return Number(((numerator / denominator) * 100).toFixed(2));
 };
 
+const toRatio = (numerator: number, denominator: number): number => {
+  if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator === 0) return 0;
+  return Number((numerator / denominator).toFixed(4));
+};
+
 const toRoundedOrNull = (value: number): number | null => {
   if (!Number.isFinite(value)) return null;
   return Number(value.toFixed(2));
@@ -154,13 +210,41 @@ const sortFinancialRows = (rows: FinancialRowPayload[]): FinancialRowPayload[] =
   });
 
 const toFinancialPayloadRow = (
-  row: Omit<FinancialRowPayload, 'grossMarginPct' | 'operatingMarginPct' | 'netMarginPct' | 'debtToAssetsPct'>,
+  row: Omit<
+    FinancialRowPayload,
+    | 'grossMarginPct'
+    | 'operatingMarginPct'
+    | 'netMarginPct'
+    | 'debtToAssetsPct'
+    | 'freeCashFlowMarginPct'
+    | 'operatingCashFlowMarginPct'
+    | 'debtToEquityRatio'
+    | 'currentRatio'
+    | 'returnOnAssetsPct'
+    | 'returnOnEquityPct'
+    | 'capexToRevenuePct'
+    | 'sbcToRevenuePct'
+    | 'assetTurnoverRatio'
+    | 'fcfConversionPct'
+    | 'interestCoverageRatio'
+  >,
 ): FinancialRowPayload => ({
   ...row,
   grossMarginPct: toPercentage(row.grossProfit, row.revenue),
   operatingMarginPct: toPercentage(row.operatingIncome, row.revenue),
   netMarginPct: toPercentage(row.netIncome, row.revenue),
   debtToAssetsPct: toPercentage(row.totalLiabilities, row.totalAssets),
+  freeCashFlowMarginPct: toPercentage(row.freeCashFlow, row.revenue),
+  operatingCashFlowMarginPct: toPercentage(row.operatingCashFlow, row.revenue),
+  debtToEquityRatio: toRatio(row.totalLiabilities, row.totalEquity),
+  currentRatio: toRatio(row.currentAssets, row.currentLiabilities),
+  returnOnAssetsPct: toPercentage(row.netIncome, row.totalAssets),
+  returnOnEquityPct: toPercentage(row.netIncome, row.totalEquity),
+  capexToRevenuePct: toPercentage(row.capitalExpenditures, row.revenue),
+  sbcToRevenuePct: toPercentage(row.stockBasedCompensation, row.revenue),
+  assetTurnoverRatio: toRatio(row.revenue, row.totalAssets),
+  fcfConversionPct: toPercentage(row.freeCashFlow, row.netIncome),
+  interestCoverageRatio: toRatio(row.operatingIncome, Math.abs(row.interestExpense)),
 });
 
 const fromLocalFinancialRows = (asset: AssetWithFinancials): FinancialRowPayload[] =>
@@ -175,10 +259,21 @@ const fromLocalFinancialRows = (asset: AssetWithFinancials): FinancialRowPayload
         operatingIncome: item.operating_income,
         netIncome: item.net_income,
         eps: item.eps,
+        operatingCashFlow: 0,
+        capitalExpenditures: 0,
         freeCashFlow: item.free_cash_flow,
+        stockBasedCompensation: 0,
+        dilutedSharesOutstanding: 0,
+        researchAndDevelopmentExpense: 0,
+        sellingGeneralAdministrativeExpense: 0,
         totalAssets: item.total_assets,
+        currentAssets: 0,
+        cashAndEquivalents: 0,
         totalLiabilities: item.total_liabilities,
+        currentLiabilities: 0,
+        longTermDebt: 0,
         totalEquity: item.total_equity,
+        interestExpense: 0,
         dividendsPerShare: item.dividends_per_share,
       }),
     ),
@@ -196,10 +291,21 @@ const fromExternalFinancialRows = (rows: ExternalFinancialRow[]): FinancialRowPa
         operatingIncome: item.operatingIncome,
         netIncome: item.netIncome,
         eps: item.eps,
+        operatingCashFlow: item.operatingCashFlow,
+        capitalExpenditures: item.capitalExpenditures,
         freeCashFlow: item.freeCashFlow,
+        stockBasedCompensation: item.stockBasedCompensation,
+        dilutedSharesOutstanding: item.dilutedSharesOutstanding,
+        researchAndDevelopmentExpense: item.researchAndDevelopmentExpense,
+        sellingGeneralAdministrativeExpense: item.sellingGeneralAdministrativeExpense,
         totalAssets: item.totalAssets,
+        currentAssets: item.currentAssets,
+        cashAndEquivalents: item.cashAndEquivalents,
         totalLiabilities: item.totalLiabilities,
+        currentLiabilities: item.currentLiabilities,
+        longTermDebt: item.longTermDebt,
         totalEquity: item.totalEquity,
+        interestExpense: item.interestExpense,
         dividendsPerShare: item.dividendsPerShare,
       }),
     ),
@@ -336,10 +442,18 @@ const buildPeriodComparison = (
     netIncomeGrowthPct: growthPct(latest.netIncome, previous.netIncome),
     epsGrowthPct: growthPct(latest.eps, previous.eps),
     freeCashFlowGrowthPct: growthPct(latest.freeCashFlow, previous.freeCashFlow),
+    operatingCashFlowGrowthPct: growthPct(latest.operatingCashFlow, previous.operatingCashFlow),
+    stockBasedCompensationGrowthPct: growthPct(
+      latest.stockBasedCompensation,
+      previous.stockBasedCompensation,
+    ),
     grossMarginDeltaPct: deltaPct(latest.grossMarginPct, previous.grossMarginPct),
     operatingMarginDeltaPct: deltaPct(latest.operatingMarginPct, previous.operatingMarginPct),
     netMarginDeltaPct: deltaPct(latest.netMarginPct, previous.netMarginPct),
     freeCashFlowMarginDeltaPct: deltaPct(latestFcfMargin, previousFcfMargin),
+    debtToEquityDelta: deltaPct(latest.debtToEquityRatio, previous.debtToEquityRatio),
+    currentRatioDelta: deltaPct(latest.currentRatio, previous.currentRatio),
+    interestCoverageDelta: deltaPct(latest.interestCoverageRatio, previous.interestCoverageRatio),
   };
 };
 
@@ -408,6 +522,118 @@ const buildAssetMetrics = (rows: FinancialRowPayload[]): AssetMetricsPayload => 
   };
 };
 
+type MetricDefinition = {
+  key: string;
+  category: FinancialMetricCategory;
+  metric: string;
+  unit: FinancialMetricUnit;
+  getter: (row: FinancialRowPayload) => number;
+  deltaMode?: 'growth' | 'delta';
+};
+
+const metricDefinitions: MetricDefinition[] = [
+  { key: 'revenue', category: 'Income Statement', metric: 'Revenue', unit: 'USD', getter: (row) => row.revenue },
+  { key: 'gross_profit', category: 'Income Statement', metric: 'Gross Profit', unit: 'USD', getter: (row) => row.grossProfit },
+  { key: 'operating_income', category: 'Income Statement', metric: 'Operating Income', unit: 'USD', getter: (row) => row.operatingIncome },
+  { key: 'net_income', category: 'Income Statement', metric: 'Net Income', unit: 'USD', getter: (row) => row.netIncome },
+  { key: 'r_and_d', category: 'Income Statement', metric: 'R&D Expense', unit: 'USD', getter: (row) => row.researchAndDevelopmentExpense },
+  { key: 'sga', category: 'Income Statement', metric: 'SG&A Expense', unit: 'USD', getter: (row) => row.sellingGeneralAdministrativeExpense },
+  { key: 'operating_cash_flow', category: 'Cash Flow', metric: 'Operating Cash Flow', unit: 'USD', getter: (row) => row.operatingCashFlow },
+  { key: 'capex', category: 'Cash Flow', metric: 'Capital Expenditures', unit: 'USD', getter: (row) => row.capitalExpenditures },
+  { key: 'free_cash_flow', category: 'Cash Flow', metric: 'Free Cash Flow', unit: 'USD', getter: (row) => row.freeCashFlow },
+  { key: 'stock_based_comp', category: 'Cash Flow', metric: 'Stock-Based Compensation', unit: 'USD', getter: (row) => row.stockBasedCompensation },
+  { key: 'total_assets', category: 'Balance Sheet', metric: 'Total Assets', unit: 'USD', getter: (row) => row.totalAssets },
+  { key: 'cash_equiv', category: 'Balance Sheet', metric: 'Cash & Equivalents', unit: 'USD', getter: (row) => row.cashAndEquivalents },
+  { key: 'current_assets', category: 'Balance Sheet', metric: 'Current Assets', unit: 'USD', getter: (row) => row.currentAssets },
+  { key: 'total_liabilities', category: 'Balance Sheet', metric: 'Total Liabilities', unit: 'USD', getter: (row) => row.totalLiabilities },
+  { key: 'current_liabilities', category: 'Balance Sheet', metric: 'Current Liabilities', unit: 'USD', getter: (row) => row.currentLiabilities },
+  { key: 'long_term_debt', category: 'Balance Sheet', metric: 'Long-Term Debt', unit: 'USD', getter: (row) => row.longTermDebt },
+  { key: 'total_equity', category: 'Balance Sheet', metric: 'Total Equity', unit: 'USD', getter: (row) => row.totalEquity },
+  { key: 'eps', category: 'Per Share', metric: 'EPS', unit: 'PER_SHARE', getter: (row) => row.eps },
+  { key: 'dividends_per_share', category: 'Per Share', metric: 'Dividends Per Share', unit: 'PER_SHARE', getter: (row) => row.dividendsPerShare },
+  { key: 'diluted_shares', category: 'Per Share', metric: 'Diluted Shares Outstanding', unit: 'SHARES', getter: (row) => row.dilutedSharesOutstanding },
+  { key: 'gross_margin', category: 'Margins', metric: 'Gross Margin', unit: 'PERCENT', getter: (row) => row.grossMarginPct, deltaMode: 'delta' },
+  { key: 'operating_margin', category: 'Margins', metric: 'Operating Margin', unit: 'PERCENT', getter: (row) => row.operatingMarginPct, deltaMode: 'delta' },
+  { key: 'net_margin', category: 'Margins', metric: 'Net Margin', unit: 'PERCENT', getter: (row) => row.netMarginPct, deltaMode: 'delta' },
+  { key: 'operating_cash_flow_margin', category: 'Margins', metric: 'Operating Cash Flow Margin', unit: 'PERCENT', getter: (row) => row.operatingCashFlowMarginPct, deltaMode: 'delta' },
+  { key: 'free_cash_flow_margin', category: 'Margins', metric: 'Free Cash Flow Margin', unit: 'PERCENT', getter: (row) => row.freeCashFlowMarginPct, deltaMode: 'delta' },
+  { key: 'sbc_to_revenue', category: 'Margins', metric: 'SBC / Revenue', unit: 'PERCENT', getter: (row) => row.sbcToRevenuePct, deltaMode: 'delta' },
+  { key: 'capex_to_revenue', category: 'Margins', metric: 'Capex / Revenue', unit: 'PERCENT', getter: (row) => row.capexToRevenuePct, deltaMode: 'delta' },
+  { key: 'return_on_assets', category: 'Returns', metric: 'Return on Assets', unit: 'PERCENT', getter: (row) => row.returnOnAssetsPct, deltaMode: 'delta' },
+  { key: 'return_on_equity', category: 'Returns', metric: 'Return on Equity', unit: 'PERCENT', getter: (row) => row.returnOnEquityPct, deltaMode: 'delta' },
+  { key: 'debt_to_assets', category: 'Leverage', metric: 'Debt / Assets', unit: 'PERCENT', getter: (row) => row.debtToAssetsPct, deltaMode: 'delta' },
+  { key: 'debt_to_equity', category: 'Leverage', metric: 'Debt / Equity', unit: 'RATIO', getter: (row) => row.debtToEquityRatio, deltaMode: 'delta' },
+  { key: 'current_ratio', category: 'Leverage', metric: 'Current Ratio', unit: 'RATIO', getter: (row) => row.currentRatio, deltaMode: 'delta' },
+  { key: 'interest_coverage', category: 'Leverage', metric: 'Interest Coverage', unit: 'RATIO', getter: (row) => row.interestCoverageRatio, deltaMode: 'delta' },
+  { key: 'asset_turnover', category: 'Efficiency', metric: 'Asset Turnover', unit: 'RATIO', getter: (row) => row.assetTurnoverRatio, deltaMode: 'delta' },
+  { key: 'fcf_conversion', category: 'Efficiency', metric: 'FCF Conversion', unit: 'PERCENT', getter: (row) => row.fcfConversionPct, deltaMode: 'delta' },
+];
+
+const pickQuarterRows = (
+  rows: FinancialRowPayload[],
+): {
+  latest: FinancialRowPayload | null;
+  priorQuarter: FinancialRowPayload | null;
+  sameQuarterLastYear: FinancialRowPayload | null;
+} => {
+  const quarterlyRows = rows
+    .filter((row) => row.period === 'QUARTERLY')
+    .sort((a, b) => {
+      if (a.fiscalYear !== b.fiscalYear) return b.fiscalYear - a.fiscalYear;
+      return (fiscalPeriodPriority[b.fiscalPeriod] ?? 0) - (fiscalPeriodPriority[a.fiscalPeriod] ?? 0);
+    });
+
+  const latest = quarterlyRows[0] ?? rows[0] ?? null;
+  const priorQuarter = quarterlyRows[1] ?? null;
+  const sameQuarterLastYear = latest
+    ? quarterlyRows.find(
+        (row) =>
+          row.fiscalYear === latest.fiscalYear - 1 &&
+          row.fiscalPeriod === latest.fiscalPeriod,
+      ) ?? null
+    : null;
+
+  return {
+    latest,
+    priorQuarter,
+    sameQuarterLastYear,
+  };
+};
+
+const computeMetricChange = (
+  mode: 'growth' | 'delta',
+  latestValue: number | null,
+  previousValue: number | null,
+): number | null => {
+  if (latestValue === null || previousValue === null) return null;
+  if (mode === 'delta') return deltaPct(latestValue, previousValue);
+  return growthPct(latestValue, previousValue);
+};
+
+const buildFinancialMetricsTable = (rows: FinancialRowPayload[]): FinancialMetricRow[] => {
+  const { latest, priorQuarter, sameQuarterLastYear } = pickQuarterRows(rows);
+  if (!latest) return [];
+
+  return metricDefinitions.map((definition) => {
+    const latestValue = definition.getter(latest);
+    const priorValue = priorQuarter ? definition.getter(priorQuarter) : null;
+    const yoyValue = sameQuarterLastYear ? definition.getter(sameQuarterLastYear) : null;
+    const mode = definition.deltaMode ?? 'growth';
+
+    return {
+      key: definition.key,
+      category: definition.category,
+      metric: definition.metric,
+      unit: definition.unit,
+      latestValue: Number.isFinite(latestValue) ? latestValue : null,
+      priorQuarterValue: priorValue !== null && Number.isFinite(priorValue) ? priorValue : null,
+      sameQuarterLastYearValue: yoyValue !== null && Number.isFinite(yoyValue) ? yoyValue : null,
+      qoqChangePct: computeMetricChange(mode, latestValue, priorValue),
+      yoyChangePct: computeMetricChange(mode, latestValue, yoyValue),
+    };
+  });
+};
+
 const buildScoreModel = (
   fundamentals: FundamentalsPayload | null,
   financials: FinancialRowPayload[],
@@ -415,15 +641,22 @@ const buildScoreModel = (
 ): ScoreModelPayload | null => {
   if (!fundamentals) return null;
 
-  const latestFinancial = financials[0];
-  const freeCashFlowMarginPct = latestFinancial
-    ? toPercentage(latestFinancial.freeCashFlow, latestFinancial.revenue)
-    : null;
+  const quarterlyLatest = financials.find((row) => row.period === 'QUARTERLY') ?? financials[0];
+  const latestFinancial = quarterlyLatest ?? financials[0];
+  const annualTrend = metrics.annualTrend;
 
   const result = calculateCompositeQualityScore({
     peRatio: fundamentals.peRatio,
     roe: fundamentals.roe,
+    returnOnAssetsPct: latestFinancial?.returnOnAssetsPct ?? null,
     debtToEquity: fundamentals.debtToEquity,
+    debtToAssetsPct: latestFinancial?.debtToAssetsPct ?? null,
+    currentRatio: latestFinancial?.currentRatio ?? null,
+    interestCoverageRatio: latestFinancial?.interestCoverageRatio ?? null,
+    assetTurnoverRatio: latestFinancial?.assetTurnoverRatio ?? null,
+    fcfConversionPct: latestFinancial?.fcfConversionPct ?? null,
+    sbcToRevenuePct: latestFinancial?.sbcToRevenuePct ?? null,
+    capexToRevenuePct: latestFinancial?.capexToRevenuePct ?? null,
     payoutRatio: fundamentals.payoutRatio,
     dividendSafetyScore: fundamentals.dividendSafetyScore,
     moatRating: fundamentals.moatRating,
@@ -433,14 +666,22 @@ const buildScoreModel = (
     qoqNetIncomeGrowthPct: metrics.qoq?.netIncomeGrowthPct ?? null,
     qoqEpsGrowthPct: metrics.qoq?.epsGrowthPct ?? null,
     qoqFreeCashFlowGrowthPct: metrics.qoq?.freeCashFlowGrowthPct ?? null,
+    qoqOperatingCashFlowGrowthPct: metrics.qoq?.operatingCashFlowGrowthPct ?? null,
+    qoqStockBasedCompensationGrowthPct: metrics.qoq?.stockBasedCompensationGrowthPct ?? null,
     yoyRevenueGrowthPct: metrics.yoy?.revenueGrowthPct ?? null,
     yoyNetIncomeGrowthPct: metrics.yoy?.netIncomeGrowthPct ?? null,
     yoyEpsGrowthPct: metrics.yoy?.epsGrowthPct ?? null,
     yoyFreeCashFlowGrowthPct: metrics.yoy?.freeCashFlowGrowthPct ?? null,
+    yoyOperatingCashFlowGrowthPct: metrics.yoy?.operatingCashFlowGrowthPct ?? null,
+    yoyStockBasedCompensationGrowthPct: metrics.yoy?.stockBasedCompensationGrowthPct ?? null,
+    revenueCagrPct: annualTrend?.revenueCagrPct ?? null,
+    epsCagrPct: annualTrend?.epsCagrPct ?? null,
+    freeCashFlowCagrPct: annualTrend?.freeCashFlowCagrPct ?? null,
     grossMarginPct: latestFinancial?.grossMarginPct ?? null,
     operatingMarginPct: latestFinancial?.operatingMarginPct ?? null,
     netMarginPct: latestFinancial?.netMarginPct ?? null,
-    freeCashFlowMarginPct,
+    operatingCashFlowMarginPct: latestFinancial?.operatingCashFlowMarginPct ?? null,
+    freeCashFlowMarginPct: latestFinancial?.freeCashFlowMarginPct ?? null,
   });
 
   return {
@@ -584,6 +825,7 @@ export const createAssetRouter = (
         : deriveFundamentals(financials, currentPrice);
       const metrics = buildAssetMetrics(financials);
       const scoreModel = buildScoreModel(fundamentals, financials, metrics);
+      const financialMetricTable = buildFinancialMetricsTable(financials);
 
       return res.json({
         symbol,
@@ -592,6 +834,7 @@ export const createAssetRouter = (
         fundamentals,
         metrics,
         scoreModel,
+        financialMetricTable,
         financials,
       });
     } catch (error) {
@@ -640,6 +883,7 @@ export const createAssetRouter = (
         : deriveFundamentals(financials, currentPrice);
       const metrics = buildAssetMetrics(financials);
       const scoreModel = buildScoreModel(fundamentals, financials, metrics);
+      const financialMetricTable = buildFinancialMetricsTable(financials);
 
       const resolvedQuote = quote
         ? {
@@ -666,6 +910,7 @@ export const createAssetRouter = (
         quote: resolvedQuote,
         metrics,
         scoreModel,
+        financialMetricTable,
         insights: {
           moat: classifyMoat(fundamentals?.moatRating ?? null),
           valuation: classifyValuation(fundamentals?.peRatio ?? null),

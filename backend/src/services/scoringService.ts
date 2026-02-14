@@ -48,7 +48,15 @@ export type CompositeScoreBreakdownItem = {
 export type CompositeScoreInput = {
   peRatio?: number | null;
   roe?: number | null;
+  returnOnAssetsPct?: number | null;
   debtToEquity?: number | null;
+  debtToAssetsPct?: number | null;
+  currentRatio?: number | null;
+  interestCoverageRatio?: number | null;
+  assetTurnoverRatio?: number | null;
+  fcfConversionPct?: number | null;
+  sbcToRevenuePct?: number | null;
+  capexToRevenuePct?: number | null;
   payoutRatio?: number | null;
   dividendSafetyScore?: number | null;
   moatRating?: MoatRating | null;
@@ -58,13 +66,21 @@ export type CompositeScoreInput = {
   qoqNetIncomeGrowthPct?: number | null;
   qoqEpsGrowthPct?: number | null;
   qoqFreeCashFlowGrowthPct?: number | null;
+  qoqOperatingCashFlowGrowthPct?: number | null;
+  qoqStockBasedCompensationGrowthPct?: number | null;
   yoyRevenueGrowthPct?: number | null;
   yoyNetIncomeGrowthPct?: number | null;
   yoyEpsGrowthPct?: number | null;
   yoyFreeCashFlowGrowthPct?: number | null;
+  yoyOperatingCashFlowGrowthPct?: number | null;
+  yoyStockBasedCompensationGrowthPct?: number | null;
+  revenueCagrPct?: number | null;
+  epsCagrPct?: number | null;
+  freeCashFlowCagrPct?: number | null;
   grossMarginPct?: number | null;
   operatingMarginPct?: number | null;
   netMarginPct?: number | null;
+  operatingCashFlowMarginPct?: number | null;
   freeCashFlowMarginPct?: number | null;
 };
 
@@ -109,25 +125,39 @@ const verdictFromScore = (score: number): Verdict => {
 };
 
 const COMPOSITE_WEIGHTS: CompositeScoreWeights = {
-  valuation: 0.25,
-  growth: 0.25,
-  profitability: 0.2,
-  safety: 0.15,
-  moat: 0.15,
+  valuation: 0.22,
+  growth: 0.26,
+  profitability: 0.22,
+  safety: 0.2,
+  moat: 0.1,
 };
 
-const scoreValuation = (peRatio: number | null): number => {
+const scoreValuation = (input: CompositeScoreInput): number => {
+  const peRatio = toNumberOrNull(input.peRatio);
   if (peRatio === null || peRatio <= 0) return 35;
-  if (peRatio <= 10) return 95;
-  if (peRatio <= 15) return 88;
-  if (peRatio <= 20) return 78;
-  if (peRatio <= 25) return 68;
-  if (peRatio <= 35) return 52;
-  if (peRatio <= 45) return 40;
-  return 28;
+  let score = 28;
+  if (peRatio <= 10) score = 95;
+  else if (peRatio <= 15) score = 88;
+  else if (peRatio <= 20) score = 78;
+  else if (peRatio <= 25) score = 68;
+  else if (peRatio <= 35) score = 52;
+  else if (peRatio <= 45) score = 40;
+
+  const fcfMargin = toNumberOrNull(input.freeCashFlowMarginPct);
+  const netMargin = toNumberOrNull(input.netMarginPct);
+  const earningsGrowth = toNumberOrNull(input.yoyEpsGrowthPct);
+
+  if (fcfMargin !== null && fcfMargin >= 20) score += 6;
+  if (netMargin !== null && netMargin >= 20) score += 4;
+  if (earningsGrowth !== null && earningsGrowth >= 12) score += 4;
+  if (netMargin !== null && netMargin < 0) score -= 12;
+
+  return Math.round(clamp(score, 0, 100));
 };
 
-const scoreGrowthMetric = (metric: number): number => clamp(50 + metric * 1.2, 0, 100);
+const scoreGrowthMetric = (metric: number): number => clamp(50 + metric * 1.15, 0, 100);
+
+const scoreInverseGrowthMetric = (metric: number): number => clamp(55 - metric * 0.8, 0, 100);
 
 const scoreGrowth = (input: CompositeScoreInput): number => {
   const growthMetrics = [
@@ -135,14 +165,33 @@ const scoreGrowth = (input: CompositeScoreInput): number => {
     toNumberOrNull(input.qoqNetIncomeGrowthPct),
     toNumberOrNull(input.qoqEpsGrowthPct),
     toNumberOrNull(input.qoqFreeCashFlowGrowthPct),
+    toNumberOrNull(input.qoqOperatingCashFlowGrowthPct),
     toNumberOrNull(input.yoyRevenueGrowthPct),
     toNumberOrNull(input.yoyNetIncomeGrowthPct),
     toNumberOrNull(input.yoyEpsGrowthPct),
     toNumberOrNull(input.yoyFreeCashFlowGrowthPct),
+    toNumberOrNull(input.yoyOperatingCashFlowGrowthPct),
+    toNumberOrNull(input.revenueCagrPct),
+    toNumberOrNull(input.epsCagrPct),
+    toNumberOrNull(input.freeCashFlowCagrPct),
   ].filter((value): value is number => value !== null);
 
-  if (growthMetrics.length === 0) return 50;
-  return Math.round(average(growthMetrics.map((metric) => scoreGrowthMetric(metric))));
+  const sbcGrowthPenalties = [
+    toNumberOrNull(input.qoqStockBasedCompensationGrowthPct),
+    toNumberOrNull(input.yoyStockBasedCompensationGrowthPct),
+  ].filter((value): value is number => value !== null);
+
+  const growthScore =
+    growthMetrics.length > 0
+      ? average(growthMetrics.map((metric) => scoreGrowthMetric(metric)))
+      : 50;
+
+  const dilutionPressureScore =
+    sbcGrowthPenalties.length > 0
+      ? average(sbcGrowthPenalties.map((metric) => scoreInverseGrowthMetric(metric)))
+      : 55;
+
+  return Math.round(average([growthScore, dilutionPressureScore]));
 };
 
 const scoreRoe = (roe: number | null): number => {
@@ -166,13 +215,46 @@ const scoreMargin = (margin: number | null): number => {
   return 22;
 };
 
+const scoreRoa = (roa: number | null): number => {
+  if (roa === null) return 55;
+  if (roa >= 15) return 95;
+  if (roa >= 10) return 86;
+  if (roa >= 6) return 76;
+  if (roa >= 3) return 66;
+  if (roa >= 0) return 52;
+  return 20;
+};
+
+const scoreAssetTurnover = (assetTurnover: number | null): number => {
+  if (assetTurnover === null) return 55;
+  if (assetTurnover >= 1.5) return 90;
+  if (assetTurnover >= 1.1) return 80;
+  if (assetTurnover >= 0.8) return 70;
+  if (assetTurnover >= 0.5) return 58;
+  return 42;
+};
+
+const scoreFcfConversion = (fcfConversionPct: number | null): number => {
+  if (fcfConversionPct === null) return 55;
+  if (fcfConversionPct >= 90) return 92;
+  if (fcfConversionPct >= 70) return 82;
+  if (fcfConversionPct >= 50) return 72;
+  if (fcfConversionPct >= 20) return 58;
+  if (fcfConversionPct >= 0) return 45;
+  return 20;
+};
+
 const scoreProfitability = (input: CompositeScoreInput): number => {
   const scores = [
     scoreRoe(toNumberOrNull(input.roe)),
+    scoreRoa(toNumberOrNull(input.returnOnAssetsPct)),
     scoreMargin(toNumberOrNull(input.grossMarginPct)),
     scoreMargin(toNumberOrNull(input.operatingMarginPct)),
     scoreMargin(toNumberOrNull(input.netMarginPct)),
+    scoreMargin(toNumberOrNull(input.operatingCashFlowMarginPct)),
     scoreMargin(toNumberOrNull(input.freeCashFlowMarginPct)),
+    scoreAssetTurnover(toNumberOrNull(input.assetTurnoverRatio)),
+    scoreFcfConversion(toNumberOrNull(input.fcfConversionPct)),
   ];
 
   return Math.round(average(scores));
@@ -197,6 +279,51 @@ const scorePayoutRatio = (payoutRatio: number | null): number => {
   return 20;
 };
 
+const scoreDebtToAssets = (debtToAssetsPct: number | null): number => {
+  if (debtToAssetsPct === null) return 55;
+  if (debtToAssetsPct <= 25) return 90;
+  if (debtToAssetsPct <= 40) return 80;
+  if (debtToAssetsPct <= 55) return 68;
+  if (debtToAssetsPct <= 70) return 52;
+  return 30;
+};
+
+const scoreCurrentRatio = (currentRatio: number | null): number => {
+  if (currentRatio === null || currentRatio <= 0) return 50;
+  if (currentRatio >= 2) return 88;
+  if (currentRatio >= 1.4) return 78;
+  if (currentRatio >= 1) return 66;
+  if (currentRatio >= 0.75) return 52;
+  return 28;
+};
+
+const scoreInterestCoverage = (interestCoverageRatio: number | null): number => {
+  if (interestCoverageRatio === null || interestCoverageRatio <= 0) return 50;
+  if (interestCoverageRatio >= 12) return 92;
+  if (interestCoverageRatio >= 8) return 84;
+  if (interestCoverageRatio >= 4) return 70;
+  if (interestCoverageRatio >= 2) return 55;
+  return 30;
+};
+
+const scoreCapexBurden = (capexToRevenuePct: number | null): number => {
+  if (capexToRevenuePct === null || capexToRevenuePct <= 0) return 60;
+  if (capexToRevenuePct <= 6) return 88;
+  if (capexToRevenuePct <= 10) return 78;
+  if (capexToRevenuePct <= 15) return 66;
+  if (capexToRevenuePct <= 22) return 52;
+  return 35;
+};
+
+const scoreSbcBurden = (sbcToRevenuePct: number | null): number => {
+  if (sbcToRevenuePct === null || sbcToRevenuePct <= 0) return 60;
+  if (sbcToRevenuePct <= 2) return 90;
+  if (sbcToRevenuePct <= 5) return 78;
+  if (sbcToRevenuePct <= 8) return 64;
+  if (sbcToRevenuePct <= 12) return 48;
+  return 30;
+};
+
 const scoreVolatility = (historicalVolatility: number | null): number => {
   if (historicalVolatility === null || historicalVolatility <= 0) return 55;
   if (historicalVolatility <= 0.2) return 88;
@@ -209,7 +336,12 @@ const scoreVolatility = (historicalVolatility: number | null): number => {
 const scoreSafety = (input: CompositeScoreInput): number => {
   const scores = [
     scoreDebtToEquity(toNumberOrNull(input.debtToEquity)),
+    scoreDebtToAssets(toNumberOrNull(input.debtToAssetsPct)),
+    scoreCurrentRatio(toNumberOrNull(input.currentRatio)),
+    scoreInterestCoverage(toNumberOrNull(input.interestCoverageRatio)),
     scorePayoutRatio(toNumberOrNull(input.payoutRatio)),
+    scoreSbcBurden(toNumberOrNull(input.sbcToRevenuePct)),
+    scoreCapexBurden(toNumberOrNull(input.capexToRevenuePct)),
     toNumberOrNull(input.dividendSafetyScore) ?? 55,
     scoreVolatility(toNumberOrNull(input.historicalVolatility)),
   ];
@@ -245,7 +377,7 @@ export const calculateCompositeQualityScore = (
   input: CompositeScoreInput,
 ): CompositeScoreResult => {
   const components: CompositeScoreComponents = {
-    valuation: scoreValuation(toNumberOrNull(input.peRatio)),
+    valuation: scoreValuation(input),
     growth: scoreGrowth(input),
     profitability: scoreProfitability(input),
     safety: scoreSafety(input),
@@ -270,7 +402,7 @@ export const calculateCompositeQualityScore = (
       weightedContribution: Number(
         (components.valuation * COMPOSITE_WEIGHTS.valuation).toFixed(2),
       ),
-      reason: 'P/E based value banding. Lower valuation scores higher.',
+      reason: 'Valuation from P/E with quality overlays (margin and EPS growth sanity checks).',
     },
     {
       component: 'growth',
@@ -279,7 +411,7 @@ export const calculateCompositeQualityScore = (
       weightedContribution: Number(
         (components.growth * COMPOSITE_WEIGHTS.growth).toFixed(2),
       ),
-      reason: 'QoQ and YoY growth across revenue, income, EPS, and free cash flow.',
+      reason: 'QoQ/YoY/CAGR growth from revenue, income, EPS, FCF, and operating cash flow.',
     },
     {
       component: 'profitability',
@@ -288,21 +420,21 @@ export const calculateCompositeQualityScore = (
       weightedContribution: Number(
         (components.profitability * COMPOSITE_WEIGHTS.profitability).toFixed(2),
       ),
-      reason: 'ROE and margin quality (gross, operating, net, free cash flow).',
+      reason: 'ROE/ROA, margins, asset turnover, and free-cash-flow conversion quality.',
     },
     {
       component: 'safety',
       score: components.safety,
       weight: COMPOSITE_WEIGHTS.safety,
       weightedContribution: Number((components.safety * COMPOSITE_WEIGHTS.safety).toFixed(2)),
-      reason: 'Leverage, payout ratio, dividend safety, and volatility.',
+      reason: 'Leverage, liquidity, interest coverage, payout, dilution burden, and volatility.',
     },
     {
       component: 'moat',
       score: components.moat,
       weight: COMPOSITE_WEIGHTS.moat,
       weightedContribution: Number((components.moat * COMPOSITE_WEIGHTS.moat).toFixed(2)),
-      reason: 'Competitive moat with dividend growth streak bonus.',
+      reason: 'Competitive moat with dividend durability streak bonus.',
     },
   ];
 
