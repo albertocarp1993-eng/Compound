@@ -141,6 +141,13 @@ export type AssetFinancialsResponse = {
   fundamentals: AssetFundamentalsPayload | null;
   metrics?: AssetMetricsPayload;
   scoreModel?: AssetScoreModelPayload | null;
+  valuationContext?: {
+    peRatio: number | null;
+    pegRatio: number | null;
+    epsGrowthPct: number | null;
+    valuationBand: 'Attractive' | 'Fair' | 'Expensive' | 'N/A';
+    reason: string;
+  };
   financialMetricTable?: FinancialMetricRow[];
   financials: AssetFinancialRow[];
 };

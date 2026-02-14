@@ -164,6 +164,14 @@ type ScoreModelPayload = {
   }>;
 };
 
+type ValuationContextPayload = {
+  peRatio: number | null;
+  pegRatio: number | null;
+  epsGrowthPct: number | null;
+  valuationBand: 'Attractive' | 'Fair' | 'Expensive' | 'N/A';
+  reason: string;
+};
+
 const periodPriority: Record<FinancialRowPayload['period'], number> = {
   QUARTERLY: 2,
   ANNUAL: 1,
@@ -610,11 +618,14 @@ const computeMetricChange = (
   return growthPct(latestValue, previousValue);
 };
 
-const buildFinancialMetricsTable = (rows: FinancialRowPayload[]): FinancialMetricRow[] => {
+const buildFinancialMetricsTable = (
+  rows: FinancialRowPayload[],
+  peRatio: number | null,
+): FinancialMetricRow[] => {
   const { latest, priorQuarter, sameQuarterLastYear } = pickQuarterRows(rows);
   if (!latest) return [];
 
-  return metricDefinitions.map((definition) => {
+  const baseRows = metricDefinitions.map((definition) => {
     const latestValue = definition.getter(latest);
     const priorValue = priorQuarter ? definition.getter(priorQuarter) : null;
     const yoyValue = sameQuarterLastYear ? definition.getter(sameQuarterLastYear) : null;
@@ -632,6 +643,100 @@ const buildFinancialMetricsTable = (rows: FinancialRowPayload[]): FinancialMetri
       yoyChangePct: computeMetricChange(mode, latestValue, yoyValue),
     };
   });
+
+  const findQuarterMatch = (fiscalYear: number, fiscalPeriod: string): FinancialRowPayload | null =>
+    rows.find(
+      (row) =>
+        row.period === 'QUARTERLY' &&
+        row.fiscalYear === fiscalYear &&
+        row.fiscalPeriod === fiscalPeriod,
+    ) ?? null;
+
+  const latestEpsGrowth = sameQuarterLastYear
+    ? growthPct(latest.eps, sameQuarterLastYear.eps)
+    : null;
+  const priorSameQuarterLastYear = priorQuarter
+    ? findQuarterMatch(priorQuarter.fiscalYear - 1, priorQuarter.fiscalPeriod)
+    : null;
+  const priorEpsGrowth = priorQuarter && priorSameQuarterLastYear
+    ? growthPct(priorQuarter.eps, priorSameQuarterLastYear.eps)
+    : null;
+
+  const latestPeg = derivePegRatio(peRatio, latestEpsGrowth);
+  const priorPeg = derivePegRatio(peRatio, priorEpsGrowth);
+
+  baseRows.push({
+    key: 'peg_ratio',
+    category: 'Per Share',
+    metric: 'PEG Ratio',
+    unit: 'RATIO',
+    latestValue: latestPeg,
+    priorQuarterValue: priorPeg,
+    sameQuarterLastYearValue: null,
+    qoqChangePct: computeMetricChange('growth', latestPeg, priorPeg),
+    yoyChangePct: null,
+  });
+
+  return baseRows;
+};
+
+const toNullableNumber = (value: number | null | undefined): number | null =>
+  typeof value === 'number' && Number.isFinite(value) ? value : null;
+
+const derivePegRatio = (peRatio: number | null, epsGrowthPct: number | null): number | null => {
+  if (peRatio === null || epsGrowthPct === null || peRatio <= 0 || epsGrowthPct <= 0) return null;
+  return toRoundedOrNull(peRatio / epsGrowthPct);
+};
+
+const classifyValuationBand = (
+  peRatio: number | null,
+  pegRatio: number | null,
+): 'Attractive' | 'Fair' | 'Expensive' | 'N/A' => {
+  if (peRatio === null || peRatio <= 0) return 'N/A';
+
+  if (pegRatio !== null) {
+    if (peRatio <= 20 && pegRatio <= 1.2) return 'Attractive';
+    if (peRatio <= 30 && pegRatio <= 2) return 'Fair';
+    return 'Expensive';
+  }
+
+  if (peRatio <= 15) return 'Attractive';
+  if (peRatio <= 25) return 'Fair';
+  return 'Expensive';
+};
+
+const buildValuationContext = (
+  fundamentals: FundamentalsPayload | null,
+  metrics: AssetMetricsPayload,
+): ValuationContextPayload => {
+  const peRatio = toNullableNumber(fundamentals?.peRatio ?? null);
+  const epsGrowthPct = toNullableNumber(
+    metrics.yoy?.epsGrowthPct ??
+      metrics.qoq?.epsGrowthPct ??
+      metrics.annualTrend?.epsCagrPct ??
+      null,
+  );
+  const pegRatio = derivePegRatio(peRatio, epsGrowthPct);
+  const valuationBand = classifyValuationBand(peRatio, pegRatio);
+
+  let reason = 'Insufficient valuation data.';
+  if (peRatio !== null && peRatio > 0) {
+    if (pegRatio !== null) {
+      reason = `P/E ${peRatio.toFixed(2)} and PEG ${pegRatio.toFixed(2)} using EPS growth ${epsGrowthPct?.toFixed(2)}%.`;
+    } else if (epsGrowthPct !== null && epsGrowthPct <= 0) {
+      reason = `P/E ${peRatio.toFixed(2)} with non-positive EPS growth (${epsGrowthPct.toFixed(2)}%) keeps valuation risk elevated.`;
+    } else {
+      reason = `P/E ${peRatio.toFixed(2)} (PEG unavailable without positive EPS growth history).`;
+    }
+  }
+
+  return {
+    peRatio,
+    pegRatio,
+    epsGrowthPct,
+    valuationBand,
+    reason,
+  };
 };
 
 const buildScoreModel = (
@@ -644,9 +749,11 @@ const buildScoreModel = (
   const quarterlyLatest = financials.find((row) => row.period === 'QUARTERLY') ?? financials[0];
   const latestFinancial = quarterlyLatest ?? financials[0];
   const annualTrend = metrics.annualTrend;
+  const valuationContext = buildValuationContext(fundamentals, metrics);
 
   const result = calculateCompositeQualityScore({
     peRatio: fundamentals.peRatio,
+    pegRatio: valuationContext.pegRatio,
     roe: fundamentals.roe,
     returnOnAssetsPct: latestFinancial?.returnOnAssetsPct ?? null,
     debtToEquity: fundamentals.debtToEquity,
@@ -691,13 +798,6 @@ const buildScoreModel = (
     weights: result.weights,
     breakdown: result.breakdown,
   };
-};
-
-const classifyValuation = (peRatio: number | null): string => {
-  if (peRatio === null || peRatio <= 0) return 'N/A';
-  if (peRatio <= 15) return 'Attractive';
-  if (peRatio <= 25) return 'Fair';
-  return 'Expensive';
 };
 
 const classifyMoat = (moatRating: string | null): string => {
@@ -825,7 +925,8 @@ export const createAssetRouter = (
         : deriveFundamentals(financials, currentPrice);
       const metrics = buildAssetMetrics(financials);
       const scoreModel = buildScoreModel(fundamentals, financials, metrics);
-      const financialMetricTable = buildFinancialMetricsTable(financials);
+      const financialMetricTable = buildFinancialMetricsTable(financials, fundamentals?.peRatio ?? null);
+      const valuationContext = buildValuationContext(fundamentals, metrics);
 
       return res.json({
         symbol,
@@ -834,6 +935,7 @@ export const createAssetRouter = (
         fundamentals,
         metrics,
         scoreModel,
+        valuationContext,
         financialMetricTable,
         financials,
       });
@@ -883,7 +985,8 @@ export const createAssetRouter = (
         : deriveFundamentals(financials, currentPrice);
       const metrics = buildAssetMetrics(financials);
       const scoreModel = buildScoreModel(fundamentals, financials, metrics);
-      const financialMetricTable = buildFinancialMetricsTable(financials);
+      const financialMetricTable = buildFinancialMetricsTable(financials, fundamentals?.peRatio ?? null);
+      const valuationContext = buildValuationContext(fundamentals, metrics);
 
       const resolvedQuote = quote
         ? {
@@ -910,10 +1013,13 @@ export const createAssetRouter = (
         quote: resolvedQuote,
         metrics,
         scoreModel,
+        valuationContext,
         financialMetricTable,
         insights: {
           moat: classifyMoat(fundamentals?.moatRating ?? null),
-          valuation: classifyValuation(fundamentals?.peRatio ?? null),
+          valuation: valuationContext.valuationBand === 'N/A'
+            ? 'N/A'
+            : `${valuationContext.valuationBand} (${valuationContext.reason})`,
           profitability: fundamentals
             ? fundamentals.roe >= 20
               ? 'High profitability profile'

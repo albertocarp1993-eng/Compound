@@ -99,7 +99,7 @@ export function StockDetailPage(): JSX.Element {
     return (
       <section className="rounded-xl border border-rose-700/50 bg-rose-950/30 p-6">
         <p className="text-sm text-rose-300">{error ?? 'Stock not found'}</p>
-        <Link to="/" className="mt-3 inline-block text-sm font-semibold text-rose-200 underline underline-offset-2">
+        <Link to="/command-center" className="mt-3 inline-block text-sm font-semibold text-rose-200 underline underline-offset-2">
           Back to Dashboard
         </Link>
       </section>
@@ -112,6 +112,13 @@ export function StockDetailPage(): JSX.Element {
     annualTrend: null,
   };
   const safeScoreModel = data.scoreModel ?? null;
+  const safeValuationContext = data.valuationContext ?? {
+    peRatio: data.fundamentals?.peRatio ?? null,
+    pegRatio: null,
+    epsGrowthPct: safeMetrics.yoy?.epsGrowthPct ?? safeMetrics.qoq?.epsGrowthPct ?? null,
+    valuationBand: 'N/A' as const,
+    reason: 'Valuation context unavailable.',
+  };
 
   return (
     <>
@@ -127,7 +134,7 @@ export function StockDetailPage(): JSX.Element {
             </p>
           </div>
           <Button asChild variant="secondary" size="sm">
-            <Link to="/">Back to Dashboard</Link>
+            <Link to="/command-center">Back to Dashboard</Link>
           </Button>
         </div>
 
@@ -229,9 +236,14 @@ export function StockDetailPage(): JSX.Element {
             </CardHeader>
             <CardContent>
               <p className="flex items-center gap-1 text-sm text-[color:var(--text)]">
-                <TrendingDown className="h-4 w-4 text-sky-300" /> {data.insights.valuation}
+                <TrendingDown className="h-4 w-4 text-sky-300" /> {safeValuationContext.valuationBand}
               </p>
-              <p className="numeric mt-1 text-xs text-[color:var(--muted)]">P/E {data.fundamentals?.peRatio.toFixed(2) ?? 'N/A'}</p>
+              <div className="mt-1 space-y-1 text-xs text-[color:var(--muted)]">
+                <p className="numeric">P/E {safeValuationContext.peRatio?.toFixed(2) ?? 'N/A'}</p>
+                <p className="numeric">PEG {safeValuationContext.pegRatio?.toFixed(2) ?? 'N/A'}</p>
+                <p className="numeric">EPS Growth {formatSignedPct(safeValuationContext.epsGrowthPct)}</p>
+                <p>{safeValuationContext.reason}</p>
+              </div>
             </CardContent>
           </Card>
 
@@ -292,6 +304,18 @@ export function StockDetailPage(): JSX.Element {
                   <p className={`numeric text-right ${toneByMetric(safeMetrics.qoq.freeCashFlowGrowthPct)}`}>
                     {formatSignedPct(safeMetrics.qoq.freeCashFlowGrowthPct)}
                   </p>
+                  <p className="text-[color:var(--muted)]">Operating Cash Flow</p>
+                  <p className={`numeric text-right ${toneByMetric(safeMetrics.qoq.operatingCashFlowGrowthPct)}`}>
+                    {formatSignedPct(safeMetrics.qoq.operatingCashFlowGrowthPct)}
+                  </p>
+                  <p className="text-[color:var(--muted)]">Stock-Based Comp</p>
+                  <p className={`numeric text-right ${toneByMetric(safeMetrics.qoq.stockBasedCompensationGrowthPct)}`}>
+                    {formatSignedPct(safeMetrics.qoq.stockBasedCompensationGrowthPct)}
+                  </p>
+                  <p className="text-[color:var(--muted)]">Debt/Equity Delta</p>
+                  <p className={`numeric text-right ${toneByMetric(safeMetrics.qoq.debtToEquityDelta)}`}>
+                    {safeMetrics.qoq.debtToEquityDelta === null ? 'N/A' : safeMetrics.qoq.debtToEquityDelta.toFixed(2)}
+                  </p>
                 </div>
               </>
             ) : (
@@ -328,6 +352,18 @@ export function StockDetailPage(): JSX.Element {
                   <p className="text-[color:var(--muted)]">Free Cash Flow</p>
                   <p className={`numeric text-right ${toneByMetric(safeMetrics.yoy.freeCashFlowGrowthPct)}`}>
                     {formatSignedPct(safeMetrics.yoy.freeCashFlowGrowthPct)}
+                  </p>
+                  <p className="text-[color:var(--muted)]">Operating Cash Flow</p>
+                  <p className={`numeric text-right ${toneByMetric(safeMetrics.yoy.operatingCashFlowGrowthPct)}`}>
+                    {formatSignedPct(safeMetrics.yoy.operatingCashFlowGrowthPct)}
+                  </p>
+                  <p className="text-[color:var(--muted)]">Stock-Based Comp</p>
+                  <p className={`numeric text-right ${toneByMetric(safeMetrics.yoy.stockBasedCompensationGrowthPct)}`}>
+                    {formatSignedPct(safeMetrics.yoy.stockBasedCompensationGrowthPct)}
+                  </p>
+                  <p className="text-[color:var(--muted)]">Current Ratio Delta</p>
+                  <p className={`numeric text-right ${toneByMetric(safeMetrics.yoy.currentRatioDelta)}`}>
+                    {safeMetrics.yoy.currentRatioDelta === null ? 'N/A' : safeMetrics.yoy.currentRatioDelta.toFixed(2)}
                   </p>
                 </div>
               </>

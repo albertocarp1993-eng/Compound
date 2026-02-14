@@ -49,6 +49,13 @@ export type AssetComprehensiveResponse = {
   };
   metrics?: AssetMetricsPayload;
   scoreModel?: AssetScoreModelPayload | null;
+  valuationContext?: {
+    peRatio: number | null;
+    pegRatio: number | null;
+    epsGrowthPct: number | null;
+    valuationBand: 'Attractive' | 'Fair' | 'Expensive' | 'N/A';
+    reason: string;
+  };
   insights: {
     moat: string;
     valuation: string;

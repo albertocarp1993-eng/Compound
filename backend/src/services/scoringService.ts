@@ -47,6 +47,7 @@ export type CompositeScoreBreakdownItem = {
 
 export type CompositeScoreInput = {
   peRatio?: number | null;
+  pegRatio?: number | null;
   roe?: number | null;
   returnOnAssetsPct?: number | null;
   debtToEquity?: number | null;
@@ -134,6 +135,7 @@ const COMPOSITE_WEIGHTS: CompositeScoreWeights = {
 
 const scoreValuation = (input: CompositeScoreInput): number => {
   const peRatio = toNumberOrNull(input.peRatio);
+  const pegRatio = toNumberOrNull(input.pegRatio);
   if (peRatio === null || peRatio <= 0) return 35;
   let score = 28;
   if (peRatio <= 10) score = 95;
@@ -146,6 +148,13 @@ const scoreValuation = (input: CompositeScoreInput): number => {
   const fcfMargin = toNumberOrNull(input.freeCashFlowMarginPct);
   const netMargin = toNumberOrNull(input.netMarginPct);
   const earningsGrowth = toNumberOrNull(input.yoyEpsGrowthPct);
+
+  if (pegRatio !== null) {
+    if (pegRatio <= 1) score += 12;
+    else if (pegRatio <= 1.5) score += 7;
+    else if (pegRatio <= 2) score += 2;
+    else if (pegRatio > 2.5) score -= 10;
+  }
 
   if (fcfMargin !== null && fcfMargin >= 20) score += 6;
   if (netMargin !== null && netMargin >= 20) score += 4;

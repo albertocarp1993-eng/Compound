@@ -111,11 +111,13 @@ export function FinancialStatementsPanel({
 
   const annualRows = data.financials.filter((row) => row.period === 'ANNUAL');
   const quarterlyRows = data.financials.filter((row) => row.period === 'QUARTERLY');
+  const hasQuarterly = quarterlyRows.length > 0;
+  const hasAnnual = annualRows.length > 0;
   const baseRows = statementPeriod === 'QUARTERLY'
-    ? quarterlyRows.length > 0
+    ? hasQuarterly
       ? quarterlyRows
       : annualRows
-    : annualRows.length > 0
+    : hasAnnual
       ? annualRows
       : data.financials;
 
@@ -191,27 +193,29 @@ export function FinancialStatementsPanel({
             <button
               type="button"
               onClick={() => setStatementPeriod('ANNUAL')}
+              disabled={!hasAnnual}
               className={`rounded-md border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] ${
                 statementPeriod === 'ANNUAL'
                   ? 'border-sky-400/50 bg-sky-400/15 text-sky-300'
                   : 'border-[var(--line)] text-[color:var(--muted)]'
-              }`}
+              } ${!hasAnnual ? 'cursor-not-allowed opacity-40' : ''}`}
             >
               Annual
             </button>
             <button
               type="button"
               onClick={() => setStatementPeriod('QUARTERLY')}
+              disabled={!hasQuarterly}
               className={`rounded-md border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] ${
                 statementPeriod === 'QUARTERLY'
                   ? 'border-sky-400/50 bg-sky-400/15 text-sky-300'
                   : 'border-[var(--line)] text-[color:var(--muted)]'
-              }`}
+              } ${!hasQuarterly ? 'cursor-not-allowed opacity-40' : ''}`}
             >
               Quarterly
             </button>
             <p className="text-[11px] text-[color:var(--muted)]">
-              Showing {rowsForDisplay.length} rows
+              Mode: {statementPeriod} | Showing {rowsForDisplay.length} rows
             </p>
           </div>
         )}
