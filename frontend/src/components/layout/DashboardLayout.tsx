@@ -158,6 +158,7 @@ export function DashboardLayout(): JSX.Element {
   };
 
   const activeSidebarPath = useMemo(() => location.pathname, [location.pathname]);
+  const isStockPage = location.pathname.startsWith('/stocks/');
 
   return (
     <div className="flex min-h-screen w-full">
@@ -196,7 +197,7 @@ export function DashboardLayout(): JSX.Element {
           ))}
         </nav>
 
-        {!collapsed && (
+        {!collapsed && !isStockPage && (
           <div className="mt-6 space-y-3 rounded-lg border border-[var(--line)] bg-[color:var(--surface)] p-3">
             <p className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted)]">Portfolio</p>
             <select
@@ -231,8 +232,12 @@ export function DashboardLayout(): JSX.Element {
         <header className="mb-4 rounded-xl border border-[var(--line)] bg-[color:var(--surface)] p-4">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--muted)]">Command Deck</p>
-              <h1 className="text-2xl font-semibold text-[color:var(--text)]">Snowball Elite</h1>
+              <p className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--muted)]">
+                {isStockPage ? 'Stock Workspace' : 'Command Deck'}
+              </p>
+              <h1 className="text-2xl font-semibold text-[color:var(--text)]">
+                {isStockPage ? 'Snowball Elite Stock Page' : 'Snowball Elite'}
+              </h1>
             </div>
 
             <div className="flex items-center gap-2">
@@ -258,55 +263,57 @@ export function DashboardLayout(): JSX.Element {
             <AssetSearchBar onSelectSymbol={(symbol) => navigate(`/stocks/${symbol}`)} />
           </div>
 
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
-            {dashboardData.loading ? (
-              <>
-                <Skeleton className="h-16" />
-                <Skeleton className="h-16" />
-                <Skeleton className="h-16" />
-                <Skeleton className="h-16" />
-              </>
-            ) : (
-              <>
-                <div className="rounded-lg border border-[var(--line)] bg-[color:var(--surface-soft)] p-3">
-                  <p className="text-[11px] uppercase tracking-[0.15em] text-[color:var(--muted)]">Net Worth</p>
-                  <p className="numeric mt-1 text-xl font-semibold text-[color:var(--text)]">
-                    {formatCurrency(dashboardData.kpis?.netWorth ?? 0)}
-                  </p>
-                </div>
-                <div className="rounded-lg border border-[var(--line)] bg-[color:var(--surface-soft)] p-3">
-                  <p className="text-[11px] uppercase tracking-[0.15em] text-[color:var(--muted)]">Day Change</p>
-                  <p
-                    className="numeric mt-1 text-xl font-semibold"
-                    style={{ color: (dashboardData.kpis?.dayChangePct ?? 0) >= 0 ? '#22c55e' : '#ef4444' }}
-                  >
-                    {(dashboardData.kpis?.dayChangePct ?? 0).toFixed(2)}%
-                  </p>
-                </div>
-                <div className="rounded-lg border border-[var(--line)] bg-[color:var(--surface-soft)] p-3">
-                  <p className="text-[11px] uppercase tracking-[0.15em] text-[color:var(--muted)]">YTD Dividends</p>
-                  <p className="numeric mt-1 text-xl font-semibold text-emerald-300">
-                    {formatCurrency(dashboardData.kpis?.ytdDividends ?? 0)}
-                  </p>
-                </div>
-                <div className="rounded-lg border border-[var(--line)] bg-[color:var(--surface-soft)] p-3">
-                  <p className="text-[11px] uppercase tracking-[0.15em] text-[color:var(--muted)]">Snowball Factor</p>
-                  <p className="numeric mt-1 text-xl font-semibold text-sky-300">
-                    {(dashboardData.kpis?.snowballFactor ?? 0).toFixed(2)}x
-                  </p>
-                </div>
-              </>
-            )}
-          </div>
+          {!isStockPage && (
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              {dashboardData.loading ? (
+                <>
+                  <Skeleton className="h-16" />
+                  <Skeleton className="h-16" />
+                  <Skeleton className="h-16" />
+                  <Skeleton className="h-16" />
+                </>
+              ) : (
+                <>
+                  <div className="rounded-lg border border-[var(--line)] bg-[color:var(--surface-soft)] p-3">
+                    <p className="text-[11px] uppercase tracking-[0.15em] text-[color:var(--muted)]">Net Worth</p>
+                    <p className="numeric mt-1 text-xl font-semibold text-[color:var(--text)]">
+                      {formatCurrency(dashboardData.kpis?.netWorth ?? 0)}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-[var(--line)] bg-[color:var(--surface-soft)] p-3">
+                    <p className="text-[11px] uppercase tracking-[0.15em] text-[color:var(--muted)]">Day Change</p>
+                    <p
+                      className="numeric mt-1 text-xl font-semibold"
+                      style={{ color: (dashboardData.kpis?.dayChangePct ?? 0) >= 0 ? '#22c55e' : '#ef4444' }}
+                    >
+                      {(dashboardData.kpis?.dayChangePct ?? 0).toFixed(2)}%
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-[var(--line)] bg-[color:var(--surface-soft)] p-3">
+                    <p className="text-[11px] uppercase tracking-[0.15em] text-[color:var(--muted)]">YTD Dividends</p>
+                    <p className="numeric mt-1 text-xl font-semibold text-emerald-300">
+                      {formatCurrency(dashboardData.kpis?.ytdDividends ?? 0)}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-[var(--line)] bg-[color:var(--surface-soft)] p-3">
+                    <p className="text-[11px] uppercase tracking-[0.15em] text-[color:var(--muted)]">Snowball Factor</p>
+                    <p className="numeric mt-1 text-xl font-semibold text-sky-300">
+                      {(dashboardData.kpis?.snowballFactor ?? 0).toFixed(2)}x
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </header>
 
-        {portfolioError && (
+        {!isStockPage && portfolioError && (
           <div className="mb-3 rounded-md border border-rose-700/60 bg-rose-950/50 px-3 py-2 text-sm text-rose-300">
             {portfolioError}
           </div>
         )}
 
-        {dashboardData.error && (
+        {!isStockPage && dashboardData.error && (
           <div className="mb-3 rounded-md border border-rose-700/60 bg-rose-950/50 px-3 py-2 text-sm text-rose-300">
             {dashboardData.error}
           </div>
