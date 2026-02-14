@@ -54,11 +54,13 @@ export type ExternalFinancialRow = {
 
 type RawFactEntry = {
   val?: number;
+  start?: string;
   end?: string;
   fy?: number;
   fp?: string;
   form?: string;
   filed?: string;
+  frame?: string;
 };
 
 type SecTicker = {
@@ -238,29 +240,48 @@ const findBestEntries = (
 ): RawFactEntry[] => {
   if (!usGaap) return [];
 
-  let best: RawFactEntry[] = [];
+  let bestEntries: RawFactEntry[] = [];
+  let bestLatest = '';
+  let bestCount = 0;
+  let bestPreferred = false;
+
+  const latestStamp = (entries: RawFactEntry[]): string =>
+    entries.reduce((latest, entry) => {
+      const stamp = String(entry.filed ?? entry.end ?? '');
+      return stamp > latest ? stamp : latest;
+    }, '');
+
+  const considerCandidate = (entries: RawFactEntry[], preferred: boolean) => {
+    if (!Array.isArray(entries) || entries.length === 0) return;
+    const latest = latestStamp(entries);
+
+    const isBetter =
+      latest > bestLatest ||
+      (latest === bestLatest && preferred && !bestPreferred) ||
+      (latest === bestLatest && preferred === bestPreferred && entries.length > bestCount);
+
+    if (isBetter) {
+      bestEntries = entries;
+      bestLatest = latest;
+      bestCount = entries.length;
+      bestPreferred = preferred;
+    }
+  };
 
   for (const tag of tags) {
     const node = usGaap[tag];
     if (!node?.units) continue;
 
     for (const unit of preferredUnits) {
-      const entries = node.units[unit];
-      if (Array.isArray(entries) && entries.length > best.length) {
-        best = entries;
-      }
+      considerCandidate(node.units[unit] ?? [], true);
     }
 
-    if (best.length > 0) continue;
-
     for (const entries of Object.values(node.units)) {
-      if (Array.isArray(entries) && entries.length > best.length) {
-        best = entries;
-      }
+      considerCandidate(entries, false);
     }
   }
 
-  return best;
+  return bestEntries;
 };
 
 const normalizeEntries = (
@@ -271,8 +292,10 @@ const normalizeEntries = (
   fiscalYear: number;
   fiscalPeriod: string;
   value: number;
+  start: string;
   filed: string;
   end: string;
+  frame: string;
 }> => {
   const map = new Map<
     string,
@@ -281,8 +304,10 @@ const normalizeEntries = (
       fiscalYear: number;
       fiscalPeriod: string;
       value: number;
+      start: string;
       filed: string;
       end: string;
+      frame: string;
     }
   >();
 
@@ -313,18 +338,51 @@ const normalizeEntries = (
     if (period === 'ANNUAL') fiscalPeriod = 'FY';
 
     const key = `${fiscalYear}-${fiscalPeriod}`;
+    const start = entry.start ?? '';
     const filed = entry.filed ?? '';
     const end = entry.end ?? '';
+    const frame = String(entry.frame ?? '').toUpperCase();
 
     const current = map.get(key);
-    if (!current || filed > current.filed || end > current.end) {
+    const currentFrame = current?.frame ?? '';
+    const hasQuarterFrame = /Q[1-4]/.test(frame);
+    const currentHasQuarterFrame = /Q[1-4]/.test(currentFrame);
+    const currentFiled = current?.filed ?? '';
+    const currentEnd = current?.end ?? '';
+    const currentValue = current?.value ?? 0;
+    const hasCurrent = current !== undefined;
+    const sameFilingWindow = hasCurrent && filed === currentFiled && end === currentEnd;
+    const preferOnTie =
+      sameFilingWindow &&
+      period === 'QUARTERLY' &&
+      ((hasQuarterFrame && !currentHasQuarterFrame) ||
+        (!hasQuarterFrame &&
+          !currentHasQuarterFrame &&
+          Math.abs(entry.val) > 0 &&
+          Math.abs(entry.val) < Math.abs(currentValue)));
+    const preferAnnualTie =
+      sameFilingWindow &&
+      period === 'ANNUAL' &&
+      Math.abs(entry.val) > Math.abs(currentValue);
+    const replaceZero = hasCurrent && currentValue === 0 && entry.val !== 0;
+
+    if (
+      !hasCurrent ||
+      filed > currentFiled ||
+      end > currentEnd ||
+      replaceZero ||
+      preferOnTie ||
+      preferAnnualTie
+    ) {
       map.set(key, {
         key,
         fiscalYear,
         fiscalPeriod,
         value: entry.val,
+        start,
         filed,
         end,
+        frame,
       });
     }
   }
@@ -353,14 +411,34 @@ const buildFinancialRows = (
   const revenue = normalizeEntries(
     findBestEntries(
       usGaap,
-      ['Revenues', 'SalesRevenueNet', 'RevenueFromContractWithCustomerExcludingAssessedTax'],
+      [
+        'Revenues',
+        'SalesRevenueNet',
+        'RevenueFromContractWithCustomerExcludingAssessedTax',
+        'RevenueFromContractWithCustomerIncludingAssessedTax',
+      ],
       ['USD'],
     ),
     period,
   );
 
+  const salesRevenueGoods = normalizeEntries(
+    findBestEntries(usGaap, ['SalesRevenueGoodsNet'], ['USD']),
+    period,
+  );
+
+  const salesRevenueServices = normalizeEntries(
+    findBestEntries(usGaap, ['SalesRevenueServicesNet'], ['USD']),
+    period,
+  );
+
   const grossProfit = normalizeEntries(
     findBestEntries(usGaap, ['GrossProfit'], ['USD']),
+    period,
+  );
+
+  const costOfRevenue = normalizeEntries(
+    findBestEntries(usGaap, ['CostOfGoodsAndServicesSold', 'CostOfRevenue'], ['USD']),
     period,
   );
 
@@ -392,7 +470,15 @@ const buildFinancialRows = (
   );
 
   const capex = normalizeEntries(
-    findBestEntries(usGaap, ['PaymentsToAcquirePropertyPlantAndEquipment'], ['USD']),
+    findBestEntries(
+      usGaap,
+      [
+        'PaymentsToAcquirePropertyPlantAndEquipment',
+        'PaymentsToAcquirePropertyPlantAndEquipmentAndIntangibleAssets',
+        'PaymentsToAcquireProductiveAssets',
+      ],
+      ['USD'],
+    ),
     period,
   );
 
@@ -414,12 +500,33 @@ const buildFinancialRows = (
   );
 
   const researchAndDevelopmentExpense = normalizeEntries(
-    findBestEntries(usGaap, ['ResearchAndDevelopmentExpense'], ['USD']),
+    findBestEntries(
+      usGaap,
+      [
+        'ResearchAndDevelopmentExpense',
+        'ResearchAndDevelopmentExpenseExcludingAcquiredInProcessCost',
+      ],
+      ['USD'],
+    ),
+    period,
+  );
+
+  const sellingExpense = normalizeEntries(
+    findBestEntries(usGaap, ['SellingAndMarketingExpense'], ['USD']),
+    period,
+  );
+
+  const generalAndAdministrativeExpense = normalizeEntries(
+    findBestEntries(usGaap, ['GeneralAndAdministrativeExpense'], ['USD']),
     period,
   );
 
   const sellingGeneralAdministrativeExpense = normalizeEntries(
-    findBestEntries(usGaap, ['SellingGeneralAndAdministrativeExpense'], ['USD']),
+    findBestEntries(
+      usGaap,
+      ['SellingGeneralAndAdministrativeExpense', 'SellingGeneralAndAdministrativeExpenseExcludingAcquiredInProcessCost'],
+      ['USD'],
+    ),
     period,
   );
 
@@ -449,7 +556,16 @@ const buildFinancialRows = (
   );
 
   const longTermDebt = normalizeEntries(
-    findBestEntries(usGaap, ['LongTermDebtNoncurrent', 'LongTermDebt'], ['USD']),
+    findBestEntries(
+      usGaap,
+      [
+        'LongTermDebtNoncurrent',
+        'LongTermDebt',
+        'LongTermDebtAndCapitalLeaseObligations',
+        'LongTermDebtAndFinanceLeaseLiabilitiesNoncurrent',
+      ],
+      ['USD'],
+    ),
     period,
   );
 
@@ -466,7 +582,11 @@ const buildFinancialRows = (
   );
 
   const interestExpense = normalizeEntries(
-    findBestEntries(usGaap, ['InterestExpense'], ['USD']),
+    findBestEntries(
+      usGaap,
+      ['InterestExpense', 'InterestExpenseDebt', 'InterestExpenseNonoperating'],
+      ['USD'],
+    ),
     period,
   );
 
@@ -483,7 +603,15 @@ const buildFinancialRows = (
     period,
   );
 
-  type Row = ExternalFinancialRow & { cfo: number | null; capex: number | null };
+  type Row = ExternalFinancialRow & {
+    cfo: number | null;
+    capex: number | null;
+    salesRevenueGoods: number;
+    salesRevenueServices: number;
+    costOfRevenue: number;
+    sellingExpense: number;
+    generalAndAdministrativeExpense: number;
+  };
   const rows = new Map<string, Row>();
 
   const ensureRow = (entry: { key: string; fiscalYear: number; fiscalPeriod: string }): Row => {
@@ -495,7 +623,10 @@ const buildFinancialRows = (
       fiscalYear: entry.fiscalYear,
       fiscalPeriod: entry.fiscalPeriod,
       revenue: 0,
+      salesRevenueGoods: 0,
+      salesRevenueServices: 0,
       grossProfit: 0,
+      costOfRevenue: 0,
       operatingIncome: 0,
       netIncome: 0,
       eps: 0,
@@ -505,6 +636,8 @@ const buildFinancialRows = (
       stockBasedCompensation: 0,
       dilutedSharesOutstanding: 0,
       researchAndDevelopmentExpense: 0,
+      sellingExpense: 0,
+      generalAndAdministrativeExpense: 0,
       sellingGeneralAdministrativeExpense: 0,
       totalAssets: 0,
       currentAssets: 0,
@@ -525,7 +658,10 @@ const buildFinancialRows = (
 
   type NumericRowField =
     | 'revenue'
+    | 'salesRevenueGoods'
+    | 'salesRevenueServices'
     | 'grossProfit'
+    | 'costOfRevenue'
     | 'operatingIncome'
     | 'netIncome'
     | 'eps'
@@ -542,6 +678,8 @@ const buildFinancialRows = (
     | 'stockBasedCompensation'
     | 'dilutedSharesOutstanding'
     | 'researchAndDevelopmentExpense'
+    | 'sellingExpense'
+    | 'generalAndAdministrativeExpense'
     | 'sellingGeneralAdministrativeExpense'
     | 'dividendsPerShare'
     | 'cfo'
@@ -563,13 +701,18 @@ const buildFinancialRows = (
   };
 
   applySeries(revenue, 'revenue');
+  applySeries(salesRevenueGoods, 'salesRevenueGoods');
+  applySeries(salesRevenueServices, 'salesRevenueServices');
   applySeries(grossProfit, 'grossProfit');
+  applySeries(costOfRevenue, 'costOfRevenue');
   applySeries(operatingIncome, 'operatingIncome');
   applySeries(netIncome, 'netIncome');
   applySeries(eps, 'eps');
   applySeries(stockBasedCompensation, 'stockBasedCompensation');
   applySeries(dilutedSharesOutstanding, 'dilutedSharesOutstanding');
   applySeries(researchAndDevelopmentExpense, 'researchAndDevelopmentExpense');
+  applySeries(sellingExpense, 'sellingExpense');
+  applySeries(generalAndAdministrativeExpense, 'generalAndAdministrativeExpense');
   applySeries(sellingGeneralAdministrativeExpense, 'sellingGeneralAdministrativeExpense');
   applySeries(totalAssets, 'totalAssets');
   applySeries(currentAssets, 'currentAssets');
@@ -595,6 +738,26 @@ const buildFinancialRows = (
 
   return [...rows.values()]
     .map((row) => {
+      if (row.revenue === 0 && (row.salesRevenueGoods !== 0 || row.salesRevenueServices !== 0)) {
+        row.revenue = row.salesRevenueGoods + row.salesRevenueServices;
+      }
+
+      if (row.grossProfit === 0 && row.revenue !== 0 && row.costOfRevenue !== 0) {
+        row.grossProfit = row.revenue - row.costOfRevenue;
+      }
+
+      if (
+        row.sellingGeneralAdministrativeExpense === 0 &&
+        (row.sellingExpense !== 0 || row.generalAndAdministrativeExpense !== 0)
+      ) {
+        row.sellingGeneralAdministrativeExpense =
+          row.sellingExpense + row.generalAndAdministrativeExpense;
+      }
+
+      if (row.totalLiabilities === 0 && row.totalAssets !== 0 && row.totalEquity !== 0) {
+        row.totalLiabilities = row.totalAssets - row.totalEquity;
+      }
+
       row.capitalExpenditures = Math.abs(row.capitalExpenditures);
 
       if (row.cfo !== null) {
@@ -779,4 +942,10 @@ export const externalDataService = {
   getFinancialStatements,
   getQuote,
   getNews,
+};
+
+export const __testing = {
+  resetTickerCache: () => {
+    tickerCache = null;
+  },
 };
