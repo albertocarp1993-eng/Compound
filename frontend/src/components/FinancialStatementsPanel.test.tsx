@@ -106,7 +106,11 @@ describe('FinancialStatementsPanel', () => {
     expect(screen.getByText('Apple Inc. (AAPL)')).toBeInTheDocument();
     expect(screen.getByText('Latest Revenue')).toBeInTheDocument();
     expect(screen.getByText('2023')).toBeInTheDocument();
-    expect(screen.getByText('Comprehensive Metrics Matrix')).toBeInTheDocument();
-    expect(screen.getAllByText('Revenue')[0]).toBeInTheDocument();
+    expect(screen.getByText('Statement Explorer')).toBeInTheDocument();
+    expect(screen.getByText('Income Statement')).toBeInTheDocument();
+    expect(screen.getByText('Balance Sheet')).toBeInTheDocument();
+    expect(screen.getByText('Cash Flow')).toBeInTheDocument();
+    expect(screen.getByText('Ratios')).toBeInTheDocument();
+    expect(screen.getByText('Metric')).toBeInTheDocument();
   });
 });
